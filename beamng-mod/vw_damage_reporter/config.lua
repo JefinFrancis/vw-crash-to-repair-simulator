@@ -15,7 +15,7 @@ local BACKEND_URL = "http://localhost:8000"
 
 -- OPTION 2: GCP Cloud - Development Environment
 -- Uncomment and update with your actual Cloud Run URL after deployment
--- local BACKEND_URL = "https://vw-crash-simulator-api-dev-XXXXXX.us-central1.run.app"
+-- local BACKEND_URL = "https://vw-crash-simulator-api-dev-34a3uja3ga-uc.a.run.app"
 
 -- OPTION 3: GCP Cloud - Production Environment
 -- Uncomment and update with your actual Cloud Run URL

@@ -25,7 +25,7 @@ A full-stack VW crash-to-repair simulator that integrates with BeamNG.drive to d
 
 | PM | Agent | Focus Area | Branch | Status | Started |
 |----|-------|------------|--------|--------|---------|
-| Jefin | GitHub Copilot | GCP Infrastructure & Deployment | main | In Progress | 2026-01-30 |
+| Jefin | GitHub Copilot | GCP Infrastructure & Deployment | main | ✅ Complete | 2026-01-30 |
 | Rohit | Claude Code | TBD | main | Starting | 2026-01-30 |
 | TBD | GitHub Copilot | TBD | TBD | Not started | - |
 
@@ -112,6 +112,9 @@ When you start working on a file, add it here with your name and date:
 | 2026-01-30 | Jefin | Made BeamNG mod backend URL configurable | `beamng-mod/vw_damage_reporter/config.lua` |
 | 2026-01-30 | Jefin | Created Terraform state bucket | `gs://vw-beamng-terraform-state` |
 | 2026-01-30 | Jefin | Enabled GCP APIs, initialized Terraform | Infrastructure ready for deploy |
+| 2026-01-30 | Jefin | Built and pushed Docker images to Artifact Registry | `backend:latest`, `frontend:latest` |
+| 2026-01-30 | Jefin | Fixed database config for Cloud Run env vars | `backend/src/config.py` |
+| 2026-01-30 | Jefin | Deployed dev environment to Cloud Run | All infrastructure live |
 
 ---
 
@@ -166,8 +169,8 @@ Critical areas where changes affect multiple components:
 ## API Conventions
 
 - **Local Base URL**: `http://localhost:8000/api/v1`
-- **Cloud Base URL (dev)**: `https://vw-crash-simulator-api-dev-XXXXX.us-central1.run.app/api/v1`
-- **Cloud Base URL (prod)**: `https://vw-crash-simulator-api-prod-XXXXX.us-central1.run.app/api/v1`
+- **Cloud Base URL (dev)**: `https://vw-crash-simulator-api-dev-34a3uja3ga-uc.a.run.app/api/v1`
+- **Cloud Base URL (prod)**: `https://vw-crash-simulator-api-prod-XXXXX.us-central1.run.app/api/v1` *(not yet deployed)*
 - **Response Format**: Arrays returned directly (no `{ items: [], total: n }` wrapper)
 - **Currency**: All prices in BRL (Brazilian Real)
 - **IDs**: UUIDs for all entities
@@ -299,12 +302,47 @@ terraform apply -var-file=environments/prod.tfvars
 
 ## GCP Deployment Status
 
-**Current State**: Infrastructure code complete, Terraform initialized
-**Next Steps**: 
-1. Complete `terraform apply` for dev environment
-2. Build and push Docker images to Artifact Registry
-3. Set up Cloud Build triggers for CI/CD
-4. Test end-to-end with BeamNG mod pointing to cloud
+**Current State**: ✅ Dev environment fully deployed and operational
+**Deployed**: 2026-01-30
+
+### Live URLs (Dev Environment)
+
+| Service | URL |
+|---------|-----|
+| **Backend API** | https://vw-crash-simulator-api-dev-34a3uja3ga-uc.a.run.app |
+| **Frontend** | https://vw-crash-simulator-web-dev-34a3uja3ga-uc.a.run.app |
+| **Health Check** | https://vw-crash-simulator-api-dev-34a3uja3ga-uc.a.run.app/api/v1/health/ |
+| **API Docs** | https://vw-crash-simulator-api-dev-34a3uja3ga-uc.a.run.app/docs |
+
+### Deployed Infrastructure
+
+| Resource | Status | Details |
+|----------|--------|---------|
+| Cloud Run Backend | ✅ Active | `vw-crash-simulator-api-dev` |
+| Cloud Run Frontend | ✅ Active | `vw-crash-simulator-web-dev` |
+| Cloud SQL PostgreSQL 15 | ✅ Running | Private IP: 172.24.0.3 |
+| Redis Memorystore | ✅ Running | IP: 10.47.138.243 |
+| VPC Connector | ✅ Active | `vw-connector-dev` |
+| Secret Manager | ✅ Configured | Database password stored |
+| Artifact Registry | ✅ Active | `us-central1-docker.pkg.dev/vw-beamng/vw-crash-simulator` |
+
+### Next Steps for Production
+
+1. Create `prod.tfvars` with production settings (always-on instances)
+2. Run `terraform apply -var-file=environments/prod.tfvars`
+3. Set up Cloud Build triggers for CI/CD automation
+4. Configure custom domain (optional)
+5. Update BeamNG mod `config.lua` with production URL for demos
+
+### To Update BeamNG Mod for Cloud
+
+Edit `beamng-mod/vw_damage_reporter/config.lua`:
+```lua
+local config = {
+    BACKEND_URL = "https://vw-crash-simulator-api-dev-34a3uja3ga-uc.a.run.app",
+    -- ... rest of config
+}
+```
 
 **APIs Enabled**:
 - ✅ Cloud Run
