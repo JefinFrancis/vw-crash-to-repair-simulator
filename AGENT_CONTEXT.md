@@ -13,14 +13,20 @@ A full-stack VW crash-to-repair simulator that integrates with BeamNG.drive to d
 
 **Tech Stack**: React 18 + TypeScript | FastAPI + Python 3.11 | PostgreSQL 15 | Redis 7 | Docker
 
+**Cloud Platform**: GCP (Google Cloud Platform)
+- **Project ID**: `vw-beamng`
+- **Region**: `us-central1`
+- **Environments**: `dev` (scale-to-zero) and `prod` (always-on)
+- **Services**: Cloud Run, Cloud SQL (PostgreSQL 15), Memorystore (Redis 7), Secret Manager, Artifact Registry
+
 ---
 
 ## Active Workstreams
 
 | PM | Agent | Focus Area | Branch | Status | Started |
 |----|-------|------------|--------|--------|---------|
+| Jefin | GitHub Copilot | GCP Infrastructure & Deployment | main | In Progress | 2026-01-30 |
 | Rohit | Claude Code | TBD | main | Starting | 2026-01-30 |
-| TBD | GitHub Copilot | TBD | TBD | Not started | - |
 | TBD | GitHub Copilot | TBD | TBD | Not started | - |
 
 ---
@@ -56,7 +62,25 @@ A full-stack VW crash-to-repair simulator that integrates with BeamNG.drive to d
 
 | Component | Owner | Files | Notes |
 |-----------|-------|-------|-------|
-| Lua Damage Reporter | Unassigned | `vw_damage_reporter/` | Auto crash detection |
+| Lua Damage Reporter | Unassigned | `vw_damage_reporter/lua/` | Auto crash detection, sends to backend |
+| Mod Configuration | Unassigned | `vw_damage_reporter/config.lua` | **Configurable backend URL** (local/dev/prod) |
+
+### Infrastructure (`/terraform/`)
+
+| Component | Owner | Files | Notes |
+|-----------|-------|-------|-------|
+| Root Module | Jefin | `main.tf`, `variables.tf`, `outputs.tf` | VPC, APIs, orchestrates modules |
+| Cloud Run Module | Jefin | `modules/cloud-run/` | Backend & Frontend services |
+| Cloud SQL Module | Jefin | `modules/cloud-sql/` | PostgreSQL with private networking |
+| Redis Module | Jefin | `modules/redis/` | Memorystore instance |
+| Environment Configs | Jefin | `environments/dev.tfvars`, `environments/prod.tfvars` | Per-environment settings |
+
+### CI/CD (Root Directory)
+
+| Component | Owner | Files | Notes |
+|-----------|-------|-------|-------|
+| Dev Pipeline | Jefin | `cloudbuild.yaml` | Triggered on `develop` branch |
+| Prod Pipeline | Jefin | `cloudbuild-prod.yaml` | Triggered on `main` branch/tags |
 
 ---
 
@@ -82,6 +106,12 @@ When you start working on a file, add it here with your name and date:
 |------|-----|--------|-------|
 | 2026-01-30 | Jefin (original) | Initial implementation complete | All |
 | 2026-01-30 | Rohit | Joined project, set up agent coordination | AGENT_CONTEXT.md |
+| 2026-01-30 | Jefin | Created GCP Terraform infrastructure | `terraform/*`, `cloudbuild.yaml`, `cloudbuild-prod.yaml` |
+| 2026-01-30 | Jefin | Updated Dockerfiles for Cloud Run (port 8080) | `backend/Dockerfile`, `frontend/Dockerfile` |
+| 2026-01-30 | Jefin | Added nginx config for Cloud Run | `frontend/nginx.conf` |
+| 2026-01-30 | Jefin | Made BeamNG mod backend URL configurable | `beamng-mod/vw_damage_reporter/config.lua` |
+| 2026-01-30 | Jefin | Created Terraform state bucket | `gs://vw-beamng-terraform-state` |
+| 2026-01-30 | Jefin | Enabled GCP APIs, initialized Terraform | Infrastructure ready for deploy |
 
 ---
 
@@ -95,6 +125,10 @@ See `/docs/adr/` for full decision records. Key decisions:
 | ADR-002 | BRL-only pricing | 2026-01-30 | Brazilian market focus, no multi-currency needed |
 | ADR-003 | WebSocket for BeamNG | 2026-01-30 | Real-time telemetry requires persistent connection |
 | ADR-004 | API returns arrays directly | 2026-01-30 | No pagination wrapper objects |
+| ADR-005 | GCP Cloud Run for hosting | 2026-01-30 | Serverless, auto-scaling, cost-effective for demo |
+| ADR-006 | Terraform for IaC | 2026-01-30 | Reproducible infrastructure, multi-environment support |
+| ADR-007 | Private VPC networking | 2026-01-30 | Cloud SQL and Redis not exposed to internet |
+| ADR-008 | Separate dev/prod environments | 2026-01-30 | Dev scales to zero, prod always-on for reliability |
 
 ---
 
@@ -104,7 +138,7 @@ Critical areas where changes affect multiple components:
 
 ### 1. Crash Event Schema
 - **Backend**: `POST /api/v1/beamng/crash-event`
-- **BeamNG Mod**: `vw_damage_reporter.lua`
+- **BeamNG Mod**: `vw_damage_reporter/lua/vw_damage_reporter.lua`
 - **Frontend**: `services/beamngService.ts`
 - **Rule**: Any schema change requires updating all three
 
@@ -116,11 +150,24 @@ Critical areas where changes affect multiple components:
 - `appointments.py` -> `dealers.py` (availability check)
 - **Rule**: Service types must be consistent
 
+### 4. Cloud Deployment URLs
+- **BeamNG Mod**: `beamng-mod/vw_damage_reporter/config.lua` - Backend URL setting
+- **Frontend**: Environment variable `VITE_API_URL`
+- **Terraform**: `terraform/environments/*.tfvars` - Service URLs
+- **Rule**: When deploying, update BeamNG mod config to point to correct Cloud Run URL
+
+### 5. Docker Port Configuration
+- **Backend/Frontend Dockerfiles**: Must use port `8080` for Cloud Run
+- **Local docker-compose**: Maps to ports `8000` and `3000`
+- **Rule**: Cloud Run requires port 8080; local dev uses standard ports
+
 ---
 
 ## API Conventions
 
-- **Base URL**: `http://localhost:8000/api/v1`
+- **Local Base URL**: `http://localhost:8000/api/v1`
+- **Cloud Base URL (dev)**: `https://vw-crash-simulator-api-dev-XXXXX.us-central1.run.app/api/v1`
+- **Cloud Base URL (prod)**: `https://vw-crash-simulator-api-prod-XXXXX.us-central1.run.app/api/v1`
 - **Response Format**: Arrays returned directly (no `{ items: [], total: n }` wrapper)
 - **Currency**: All prices in BRL (Brazilian Real)
 - **IDs**: UUIDs for all entities
@@ -179,6 +226,7 @@ When making changes that affect other workstreams:
 
 ## Environment Setup
 
+### Local Development
 ```bash
 # Clone and start
 git clone https://github.com/JefinFrancis/vw-crash-to-repair-simulator.git
@@ -191,10 +239,34 @@ Backend:  http://localhost:8000
 API Docs: http://localhost:8000/docs
 ```
 
+### GCP Deployment
+```bash
+# Prerequisites
+gcloud auth login
+gcloud config set project vw-beamng
+gcloud auth application-default login
+
+# Deploy dev environment
+cd terraform
+terraform init
+terraform plan -var-file=environments/dev.tfvars
+terraform apply -var-file=environments/dev.tfvars
+
+# Deploy prod environment
+terraform plan -var-file=environments/prod.tfvars
+terraform apply -var-file=environments/prod.tfvars
+```
+
+### BeamNG Mod Setup (for Cloud)
+1. Edit `beamng-mod/vw_damage_reporter/config.lua`
+2. Set `BACKEND_URL` to Cloud Run URL
+3. Copy `vw_damage_reporter/` to BeamNG mods folder
+
 ---
 
 ## Quick Reference
 
+### Local Ports
 | Port | Service |
 |------|---------|
 | 3000 | Frontend (React) |
@@ -202,6 +274,48 @@ API Docs: http://localhost:8000/docs
 | 5432 | PostgreSQL |
 | 6379 | Redis |
 | 5050 | pgAdmin (optional) |
+
+### GCP Resources
+| Resource | Dev | Prod |
+|----------|-----|------|
+| Cloud Run Backend | `vw-crash-simulator-api-dev` | `vw-crash-simulator-api-prod` |
+| Cloud Run Frontend | `vw-crash-simulator-web-dev` | `vw-crash-simulator-web-prod` |
+| Cloud SQL | `vw-crash-simulator-db-dev` | `vw-crash-simulator-db-prod` |
+| Redis | `vw-crash-simulator-redis-dev` | `vw-crash-simulator-redis-prod` |
+| Artifact Registry | `us-central1-docker.pkg.dev/vw-beamng/vw-crash-simulator` |
+| Terraform State | `gs://vw-beamng-terraform-state` |
+
+### Key Files for Infrastructure Changes
+| File | Purpose |
+|------|---------|
+| `terraform/main.tf` | Root Terraform module |
+| `terraform/environments/dev.tfvars` | Dev environment config |
+| `terraform/environments/prod.tfvars` | Prod environment config |
+| `cloudbuild.yaml` | Dev CI/CD pipeline |
+| `cloudbuild-prod.yaml` | Prod CI/CD pipeline |
+| `beamng-mod/vw_damage_reporter/config.lua` | BeamNG backend URL config |
+
+---
+
+## GCP Deployment Status
+
+**Current State**: Infrastructure code complete, Terraform initialized
+**Next Steps**: 
+1. Complete `terraform apply` for dev environment
+2. Build and push Docker images to Artifact Registry
+3. Set up Cloud Build triggers for CI/CD
+4. Test end-to-end with BeamNG mod pointing to cloud
+
+**APIs Enabled**:
+- ✅ Cloud Run
+- ✅ Cloud SQL Admin
+- ✅ Redis (Memorystore)
+- ✅ Secret Manager
+- ✅ Artifact Registry
+- ✅ Cloud Build
+- ✅ Compute Engine
+- ✅ Service Networking
+- ✅ VPC Access Connector
 
 ---
 
