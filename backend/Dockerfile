@@ -97,12 +97,12 @@ RUN mkdir -p logs && chown -R vwapp:vwapp logs
 # Switch to non-root user
 USER vwapp
 
-# Health check
+# Health check (port 8080 for Cloud Run)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/api/health || exit 1
+    CMD curl -f http://localhost:8080/api/v1/health || exit 1
 
-# Expose port
-EXPOSE 8000
+# Expose port 8080 for Cloud Run
+EXPOSE 8080
 
-# Production command
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
+# Production command (port 8080 for Cloud Run)
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8080", "--workers", "4"]

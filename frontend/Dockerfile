@@ -54,17 +54,21 @@ FROM base as build
 # Set production environment
 ENV NODE_ENV=production
 
+# Build-time arguments for API URL
+ARG VITE_API_URL=http://localhost:8000
+ENV VITE_API_URL=$VITE_API_URL
+
 # Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
 
 # Copy source code
 COPY . .
 
-# Build application
+# Build application with environment variable
 RUN npm run build
 
 # =============================================================================
-# Production Stage
+# Production Stage (Cloud Run compatible - port 8080)
 # =============================================================================
 FROM nginx:alpine as production
 
@@ -81,21 +85,23 @@ COPY --from=build /app/dist /usr/share/nginx/html
 RUN addgroup -g 1001 -S vwapp && \
     adduser -S vwapp -u 1001
 
-# Set ownership
+# Set ownership and fix nginx pid directory
 RUN chown -R vwapp:vwapp /usr/share/nginx/html && \
     chown -R vwapp:vwapp /var/cache/nginx && \
     chown -R vwapp:vwapp /var/log/nginx && \
-    chown -R vwapp:vwapp /etc/nginx/conf.d
+    chown -R vwapp:vwapp /etc/nginx/conf.d && \
+    touch /var/run/nginx.pid && \
+    chown -R vwapp:vwapp /var/run/nginx.pid
 
 # Switch to non-root user
 USER vwapp
 
-# Health check
+# Health check (port 8080 for Cloud Run)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:3000 || exit 1
+    CMD curl -f http://localhost:8080/health || exit 1
 
-# Expose port
-EXPOSE 3000
+# Expose port 8080 for Cloud Run
+EXPOSE 8080
 
 # Start nginx
 CMD ["nginx", "-g", "daemon off;"]
