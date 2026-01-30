@@ -170,14 +170,14 @@ module "backend" {
 
   vpc_connector = google_vpc_access_connector.connector.id
 
+  # Note: DATABASE_URL is constructed from components, with password from secrets
   env_vars = {
     ENVIRONMENT    = var.environment
     APP_NAME       = "VW Crash-to-Repair Simulator API"
     DATABASE_HOST  = module.cloud_sql.private_ip
     DATABASE_NAME  = "vw_crash_simulator"
     DATABASE_USER  = "app"
-    REDIS_HOST     = module.redis.host
-    REDIS_PORT     = "6379"
+    REDIS_URL      = "redis://${module.redis.host}:6379/0"
   }
 
   secrets = {

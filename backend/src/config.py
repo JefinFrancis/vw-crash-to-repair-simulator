@@ -1,5 +1,6 @@
 """Configuration management using Pydantic Settings."""
 
+import os
 from typing import Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -20,8 +21,13 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
     DEBUG: bool = False
 
-    # Database settings
-    DATABASE_URL: str = "postgresql://vw_user:vw_password@localhost:5432/vw_simulator"
+    # Database settings - can be set via DATABASE_URL or individual components
+    DATABASE_URL: Optional[str] = None
+    DATABASE_HOST: str = "localhost"
+    DATABASE_PORT: int = 5432
+    DATABASE_NAME: str = "vw_simulator"
+    DATABASE_USER: str = "vw_user"
+    DATABASE_PASSWORD: str = "vw_password"
     DATABASE_POOL_SIZE: int = 5
     DATABASE_MAX_OVERFLOW: int = 10
 
@@ -53,9 +59,17 @@ class Settings(BaseSettings):
     LOG_FORMAT: str = "json"
 
     @property
+    def effective_database_url(self) -> str:
+        """Get the effective DATABASE_URL, building from components if not set."""
+        if self.DATABASE_URL:
+            return self.DATABASE_URL
+        # Build from individual components
+        return f"postgresql://{self.DATABASE_USER}:{self.DATABASE_PASSWORD}@{self.DATABASE_HOST}:{self.DATABASE_PORT}/{self.DATABASE_NAME}"
+
+    @property
     def database_url_async(self) -> str:
         """Async database URL for SQLAlchemy."""
-        return self.DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://")
+        return self.effective_database_url.replace("postgresql://", "postgresql+asyncpg://")
     
     @property
     def ALLOWED_ORIGINS(self) -> list[str]:
