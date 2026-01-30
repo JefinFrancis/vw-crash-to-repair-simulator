@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VW Brand Day - Crash-to-Repair Experience</title>
+    <link rel="stylesheet" href="static/css/styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=VW+Text:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="app">
+        <!-- Header -->
+        <header class="header">
+            <div class="container">
+                <div class="header-content">
+                    <img src="static/images/vw-logo.png" alt="Volkswagen" class="vw-logo" onerror="this.style.display='none'">
+                    <h1>Brand Day - Crash-to-Repair Experience</h1>
+                    <div class="live-indicator">
+                        <span class="status-dot" id="connectionStatus"></span>
+                        <span id="statusText">Sistema Inicializando...</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            
+            <!-- Landing Screen -->
+            <section id="landingScreen" class="screen active">
+                <div class="container">
+                    <div class="welcome-card">
+                        <h2>Bem-vindo ao Simulador Crash-to-Repair</h2>
+                        <p class="subtitle">Experiência completa: da colisão à estimativa de reparo</p>
+                        
+                        <div class="workflow-steps">
+                            <div class="step">
+                                <div class="step-number">1</div>
+                                <div class="step-content">
+                                    <h3>Simule o Acidente</h3>
+                                    <p>Conduza um veículo VW no BeamNG.tech</p>
+                                </div>
+                            </div>
+                            <div class="step">
+                                <div class="step-number">2</div>
+                                <div class="step-content">
+                                    <h3>Analise os Danos</h3>
+                                    <p>Sistema analisa telemetria e identifica componentes danificados</p>
+                                </div>
+                            </div>
+                            <div class="step">
+                                <div class="step-number">3</div>
+                                <div class="step-content">
+                                    <h3>Orçamento VW</h3>
+                                    <p>Peças originais VW com preços reais do mercado brasileiro</p>
+                                </div>
+                            </div>
+                            <div class="step">
+                                <div class="step-number">4</div>
+                                <div class="step-content">
+                                    <h3>Rede de Concessionárias</h3>
+                                    <p>Localização e agendamento na rede autorizada VW</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="action-buttons">
+                            <button id="connectBeamNG" class="btn btn-primary btn-large">
+                                Conectar BeamNG.tech
+                            </button>
+                            <button id="startDemo" class="btn btn-secondary btn-large" disabled>
+                                Iniciar Demonstração
+                            </button>
+                        </div>
+
+                        <div class="system-status" id="systemStatus">
+                            <h4>Status do Sistema</h4>
+                            <div class="status-grid">
+                                <div class="status-item">
+                                    <span class="status-label">API:</span>
+                                    <span class="status-value" id="apiStatus">Verificando...</span>
+                                </div>
+                                <div class="status-item">
+                                    <span class="status-label">BeamNG.tech:</span>
+                                    <span class="status-value" id="beamngStatus">Desconectado</span>
+                                </div>
+                                <div class="status-item">
+                                    <span class="status-label">Dados:</span>
+                                    <span class="status-value" id="dataStatus">Carregado</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Waiting for Crash Screen -->
+            <section id="waitingScreen" class="screen">
+                <div class="container">
+                    <div class="waiting-card">
+                        <div class="vehicle-display">
+                            <div class="vehicle-model" id="currentVehicle">
+                                <h2>VW T-Cross 2024</h2>
+                                <p class="variant">Comfortline</p>
+                            </div>
+                            <div class="vehicle-image">
+                                <!-- Vehicle visualization would go here -->
+                                <div class="placeholder-vehicle">🚗</div>
+                            </div>
+                        </div>
+
+                        <div class="instructions">
+                            <h3>Aguardando Colisão...</h3>
+                            <p>Conduza o veículo no BeamNG.tech e colida com obstáculos ou outros veículos.</p>
+                            <p>Quando terminar, clique no botão abaixo para analisar os danos.</p>
+                        </div>
+
+                        <div class="action-center">
+                            <button id="repairMyCarBtn" class="btn btn-repair btn-pulse">
+                                🔧 REPARAR MEU CARRO
+                            </button>
+                            <p class="help-text">Este botão simula o comando "Repair My Car" do jogo</p>
+                        </div>
+
+                        <div class="session-info" id="sessionInfo">
+                            <h4>Informações da Sessão</h4>
+                            <div class="info-grid">
+                                <div class="info-item">
+                                    <span class="info-label">ID da Sessão:</span>
+                                    <span class="info-value" id="sessionId">-</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Tempo Decorrido:</span>
+                                    <span class="info-value" id="sessionTime">00:00</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Damage Analysis Screen -->
+            <section id="damageScreen" class="screen">
+                <div class="container">
+                    <div class="damage-analysis">
+                        <div class="analysis-header">
+                            <h2>Análise de Danos</h2>
+                            <div class="severity-indicator">
+                                <span class="severity-label">Severidade:</span>
+                                <div class="severity-bar">
+                                    <div class="severity-fill" id="severityBar"></div>
+                                </div>
+                                <span class="severity-text" id="severityText">-</span>
+                            </div>
+                        </div>
+
+                        <div class="damage-visualization">
+                            <div class="vehicle-outline">
+                                <!-- SVG or visual representation of damaged vehicle -->
+                                <div class="damage-zones" id="damageZones">
+                                    <!-- Damage zones will be populated by JavaScript -->
+                                </div>
+                            </div>
+                            <div class="damage-legend">
+                                <h4>Legenda</h4>
+                                <div class="legend-items">
+                                    <div class="legend-item">
+                                        <span class="legend-color critical"></span>
+                                        <span>Crítico - Substituição obrigatória</span>
+                                    </div>
+                                    <div class="legend-item">
+                                        <span class="legend-color major"></span>
+                                        <span>Grave - Reparo complexo</span>
+                                    </div>
+                                    <div class="legend-item">
+                                        <span class="legend-color moderate"></span>
+                                        <span>Moderado - Reparo simples</span>
+                                    </div>
+                                    <div class="legend-item">
+                                        <span class="legend-color minor"></span>
+                                        <span>Leve - Retoque/polimento</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="damage-details">
+                            <h3>Componentes Danificados</h3>
+                            <div class="components-list" id="damageComponents">
+                                <!-- Components will be populated by JavaScript -->
+                            </div>
+                        </div>
+
+                        <div class="action-buttons">
+                            <button id="generateEstimate" class="btn btn-primary btn-large">
+                                Gerar Orçamento de Reparo
+                            </button>
+                            <button id="backToWaiting" class="btn btn-secondary">
+                                Nova Simulação
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Repair Estimate Screen -->
+            <section id="estimateScreen" class="screen">
+                <div class="container">
+                    <div class="repair-estimate">
+                        <div class="estimate-header">
+                            <h2>Orçamento de Reparo</h2>
+                            <div class="estimate-info">
+                                <span class="estimate-id" id="estimateId">EST-0000</span>
+                                <span class="estimate-date" id="estimateDate">-</span>
+                            </div>
+                        </div>
+
+                        <div class="estimate-breakdown">
+                            <div class="parts-section">
+                                <h3>Peças Necessárias</h3>
+                                <div class="parts-list" id="partsList">
+                                    <!-- Parts will be populated by JavaScript -->
+                                </div>
+                            </div>
+
+                            <div class="labor-section">
+                                <h3>Mão de Obra</h3>
+                                <div class="labor-details" id="laborDetails">
+                                    <!-- Labor details will be populated by JavaScript -->
+                                </div>
+                            </div>
+
+                            <div class="cost-summary">
+                                <h3>Resumo dos Custos</h3>
+                                <div class="cost-breakdown" id="costBreakdown">
+                                    <!-- Cost breakdown will be populated by JavaScript -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="timeline-section">
+                            <h3>Cronograma de Reparo</h3>
+                            <div class="timeline" id="repairTimeline">
+                                <!-- Timeline will be populated by JavaScript -->
+                            </div>
+                        </div>
+
+                        <div class="action-buttons">
+                            <button id="findDealers" class="btn btn-primary btn-large">
+                                Localizar Concessionárias
+                            </button>
+                            <button id="backToDamage" class="btn btn-secondary">
+                                Voltar à Análise
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Dealer Selection Screen -->
+            <section id="dealerScreen" class="screen">
+                <div class="container">
+                    <div class="dealer-selection">
+                        <div class="selection-header">
+                            <h2>Selecionar Concessionária</h2>
+                            <div class="filters">
+                                <select id="stateFilter" class="filter-select">
+                                    <option value="">Todos os Estados</option>
+                                    <option value="SP">São Paulo</option>
+                                    <option value="RJ">Rio de Janeiro</option>
+                                    <option value="MG">Minas Gerais</option>
+                                </select>
+                                <select id="serviceFilter" class="filter-select">
+                                    <option value="">Todos os Serviços</option>
+                                    <option value="bodyshop">Funilaria</option>
+                                    <option value="collision_repair">Reparo de Colisão</option>
+                                    <option value="paint">Pintura</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="dealers-list" id="dealersList">
+                            <!-- Dealers will be populated by JavaScript -->
+                        </div>
+
+                        <div class="inventory-optimization" id="inventorySection" style="display: none;">
+                            <h3>Otimização de Estoque</h3>
+                            <div class="optimization-details" id="optimizationDetails">
+                                <!-- Inventory optimization will be shown here -->
+                            </div>
+                        </div>
+
+                        <div class="action-buttons">
+                            <button id="scheduleAppointment" class="btn btn-primary btn-large" disabled>
+                                Agendar Reparo
+                            </button>
+                            <button id="backToEstimate" class="btn btn-secondary">
+                                Voltar ao Orçamento
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Appointment Confirmation Screen -->
+            <section id="confirmationScreen" class="screen">
+                <div class="container">
+                    <div class="confirmation-card">
+                        <div class="success-icon">✅</div>
+                        <h2>Agendamento Confirmado!</h2>
+                        
+                        <div class="appointment-details" id="appointmentDetails">
+                            <!-- Appointment details will be populated by JavaScript -->
+                        </div>
+
+                        <div class="next-steps">
+                            <h3>Próximos Passos</h3>
+                            <ol class="steps-list" id="nextStepsList">
+                                <!-- Next steps will be populated by JavaScript -->
+                            </ol>
+                        </div>
+
+                        <div class="contact-info">
+                            <h4>Informações de Contato</h4>
+                            <div class="contact-details" id="contactDetails">
+                                <!-- Contact details will be populated by JavaScript -->
+                            </div>
+                        </div>
+
+                        <div class="action-buttons">
+                            <button id="newSimulation" class="btn btn-primary btn-large">
+                                Nova Simulação
+                            </button>
+                            <button id="printSummary" class="btn btn-secondary">
+                                Imprimir Resumo
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- Loading Overlay -->
+        <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Processando...</div>
+        </div>
+
+        <!-- Error Modal -->
+        <div id="errorModal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <h3>Erro</h3>
+                <p id="errorMessage">Ocorreu um erro inesperado.</p>
+                <button id="closeError" class="btn btn-primary">OK</button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Scripts -->
+    <script src="static/js/api.js"></script>
+    <script src="static/js/app.js"></script>
+</body>
+</html>

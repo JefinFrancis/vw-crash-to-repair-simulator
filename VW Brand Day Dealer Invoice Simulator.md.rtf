@@ -1,0 +1,440 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2867
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fmodern\fcharset0 Courier;}
+{\colortbl;\red255\green255\blue255;\red0\green0\blue0;}
+{\*\expandedcolortbl;;\cssrgb\c0\c0\c0;}
+\paperw11900\paperh16840\margl1440\margr1440\vieww28060\viewh24760\viewkind0
+\deftab720
+\pard\pardeftab720\partightenfactor0
+
+\f0\fs26 \cf0 \expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 # Product Requirements Document (PRD)  \
+## Volkswagen Brand Day \'96 Crash-to-Repair Experience\
+\
+**Version:** 0.1 (Draft)  \
+**Date:** 2026-01-28  \
+**Owner:** Jefin (Product Owner)  \
+**Client Proxy:** Rohit  \
+**Client:** Volkswagen Brazil \'96 Brand/Dealer Marketing (Lucas as primary contact)  \
+**Event:** Volkswagen Dealer Brand Day (March 2026)  \
+\
+---\
+\
+## 1. Product Overview\
+\
+### 1.1 Purpose\
+\
+Build an interactive \'93Crash-to-Repair\'94 digital experience for Volkswagen Brand Day that:\
+\
+- Uses a realistic racing/crash simulator (BeamNG) to generate vehicle damage data.\
+- Transforms crash telemetry into a repair estimate (parts, pricing).\
+- Connects that estimate to the VW dealer network (simulated or real data).\
+- Demonstrates VW\'92s and Object Edge\'92s capability to:\
+  - Turn complex data into intuitive customer/dealer experiences.\
+  - Build meaningful, data-driven products extremely quickly using AI-driven development.\
+\
+This is primarily a **marketing/technology demo**, not a production system, but it should be structured so it can evolve into solving real business problems (e.g., inventory optimization, connected-car crash flows).\
+\
+---\
+\
+## 2. Goals & Non-Goals\
+\
+### 2.1 Goals\
+\
+1. **Deliver working experience in \uc0\u8804  1 calendar week of focused development time**  \
+   - Core E2E flow: crash \uc0\u8594  damage data \u8594  repair estimate \u8594  dealer selection \u8594  \'93appointment\'94.\
+2. **Demonstrate \'93new way of building\'94**  \
+   - Single lean PO/architect (Jefin) directing multiple AI agents to build the product.  \
+   - Minimal manual coding; heavy use of Cloud Code, Opus 4.5, Copilot, etc.\
+3. **Create a \'93jaw-dropping\'94 demo for dealers**  \
+   - Fun, visually compelling, clear story: \'93You crashed your car, here\'92s what it costs, here\'92s how VW dealers take care of you.\'94\
+4. **Lay groundwork for real business value**  \
+   - Design so that inventory optimization and real dealer/parts integration can be layered in.\
+   - Capture architecture and domain knowledge (ontologies, knowledge graphs, episodic memory) in repo/docs.\
+\
+### 2.2 Non-Goals (for this phase)\
+\
+- Real-time, per-millisecond damage/price updates during the race.\
+- Full production hardening (SLA, HA, full security review, etc.).\
+- Full integration into Palantir (must run **outside** Palantir due to licensing).\
+- Complete and accurate coverage of all VW models, all dealers, all parts.\
+- Deep financial or SAP/ERP integration.\
+\
+---\
+\
+## 3. Users & Use Cases\
+\
+### 3.1 Primary Users\
+\
+1. **Dealer Event Attendees (Drivers)**  \
+   - VW dealer representatives attending Brand Day.\
+   - Use the simulator, crash cars, and see repair estimates.\
+\
+2. **VW Marketing & Event Staff**  \
+   - Operate the experience during the event.\
+   - Use big screen to tell the story to the room.\
+\
+3. **VW Business Stakeholders (e.g., Lucas)**  \
+   - Evaluate Object Edge capabilities.\
+   - Look for how this could map to real business problems.\
+\
+4. **Object Edge Internal Stakeholders (Valmor, Rene, Diego, etc.)**  \
+   - Support the demo at the event.\
+   - Demonstrate AE/consulting capability on top of the demo.\
+\
+### 3.2 Key Use Cases\
+\
+1. **UC1: Dealer Drives & Crashes a Car**\
+   - User selects a VW model in BeamNG (e.g., T-Cross, Golf).\
+   - Drives a race session, inevitably crashes into obstacles or other cars.\
+   - Finishes the race.\
+\
+2. **UC2: \'93Repair My Car\'94**\
+   - After race completion, driver presses \'93Repair my car\'94 (inside game or via adjacent UI).\
+   - System captures crash/damage telemetry from BeamNG (e.g., via API, CSV export, or memory/snoop mechanism).\
+   - System infers which parts are damaged and to what extent.\
+\
+3. **UC3: Repair Estimate Generation**\
+   - Back-end maps damage \uc0\u8594  VW part numbers / part descriptions.\
+   - System computes repair cost (parts + optionally labor).\
+   - Generates an invoice-like summary.\
+\
+4. **UC4: Dealer Selection**\
+   - UI displays:\
+     - Damaged areas.\
+     - Required parts list.\
+     - Estimated total repair cost.\
+   - User selects a dealer from a list (real or simulated VW dealers near the event city).\
+\
+5. **UC5: \'93Appointment\'94 Creation**\
+   - System pretends to schedule an appointment with chosen dealer.\
+   - Shows confirmation screen: dealer name, estimated cost, \'93appointment date/time\'94 (stubbed).\
+   - Optionally \'93sends\'94 invoice (e.g., simulated email or on-screen confirmation).\
+\
+6. **UC6: Big-Screen Storytelling**\
+   - Event host mirrors the experience on a large screen:\
+     - Race/crash sequence.\
+     - Transition to repair app UX.\
+     - Visual walkthrough of damage, cost, dealer selection, and \'93inventory optimization\'94.\
+\
+7. **UC7 (Stretch): Inventory Optimization Story**\
+   - System checks dealer\'92s (stubbed) inventory for required parts.\
+   - If some parts are missing, shows:\
+     - \'93Dealer A is missing 3 parts; proposing transfer from Dealer B/C.\'94\
+   - Visual narrative of routing parts across the dealer network.\
+\
+---\
+\
+## 4. Functional Requirements\
+\
+### 4.1 BeamNG Integration\
+\
+**FR-1** \'96 BeamNG Environment Setup  \
+- Install and run BeamNG locally on a dedicated event machine.  \
+- Ensure at least 2\'963 VW models are available:\
+  - T-Cross\
+  - Golf\
+  - (Optional) Additional VW models if available with minimal extra work.\
+\
+**FR-2** \'96 Telemetry Extraction  \
+- Ability to capture crash/damage data for a completed race. Options (any viable approach is acceptable):\
+  - **Preferred:** Use any official/unofficial BeamNG APIs to access:\
+    - Per-part damage metrics (panels, suspension, engine, etc.).\
+    - Crash event metadata (speed at impact, angle, location on vehicle).\
+  - **Fallback 1:** Use existing plugin/module Fernando tested:\
+    - On \'93end race\'94 or \'93repair my car\'94, export a CSV file with damage/telemetry.\
+  - **Fallback 2:** Use system cache/memory scraping or similar reverse engineering (as discovered via Claude or Copilot) to extract damage state.\
+\
+**FR-3** \'96 Triggering the Export  \
+- Must be able to trigger telemetry export **after the race** (not real time).  \
+- Ideal trigger: custom \'93Repair my car\'94 button in-game or adjacent UI that signals the export step.\
+\
+### 4.2 Damage Interpretation & Parts Mapping\
+\
+**FR-4** \'96 Damage Parsing Module  \
+- Parse the BeamNG output (API or CSV) into a normalized internal format:\
+  - Damaged components (e.g., front bumper, left fender, suspension, windshield).\
+  - Damage severity/intensity per component.\
+  - Car model ID and configuration.\
+\
+**FR-5** \'96 Parts Ontology / Knowledge Base  \
+- Define a simple ontology / mapping for VW car models:\
+  - Car Model \uc0\u8594  Assemblies \u8594  Parts (with IDs, names, categories).\
+- Use either:\
+  - Real VW parts data from GCP (via Rene/Jags if feasible), or\
+  - Synthetic dataset with realistic structure and naming.\
+\
+**FR-6** \'96 Damage-to-Parts Logic  \
+- For each damaged component, determine:\
+  - Which parts must be replaced vs. repaired.\
+  - Quantities (usually 1 per part but flexible).\
+- Provide a confidence level for mapping (for potential future tuning).\
+\
+### 4.3 Pricing & Invoice Generation\
+\
+**FR-7** \'96 Pricing Data  \
+- Attach a price to each part:\
+  - Real prices from VW data if available, otherwise simulated prices in realistic ranges.\
+- Optional: define labor cost multipliers (per component or per hour).\
+\
+**FR-8** \'96 Estimate Calculation  \
+- Compute:\
+  - Parts subtotal.\
+  - Optional labor subtotal.\
+  - Total estimated repair cost.\
+- Apply tax or fees if required for realism (configurable).\
+\
+**FR-9** \'96 Invoice Object  \
+- Generate a structured \'93Invoice\'94 object containing:\
+  - Vehicle model & run ID.\
+  - List of damaged components.\
+  - List of parts (ID, name, quantity, unit price, line total).\
+  - Totals (parts, labor, grand total).\
+  - Timestamp.\
+  - Dealer selection status (pending/assigned).\
+\
+### 4.4 Dealer & Inventory Logic\
+\
+**FR-10** \'96 Dealer Directory  \
+- Maintain a list of dealers (focus on Brazil, ideally S\'e3o Paulo / Rio):\
+  - Dealer ID, name, city, basic contact info.\
+- Support a small subset of real or stub dealers attending the event.\
+\
+**FR-11** \'96 Dealer Inventory (Stub)  \
+- For each dealer, maintain simulated inventory:\
+  - Part ID, on-hand quantity.\
+- Inventory dataset can be static JSON or seeded from sample data.\
+\
+**FR-12** \'96 Dealer Selection Flow  \
+- Allow user to:\
+  - Filter or show dealers near a given location (basic filtering is enough).\
+  - Select one dealer to handle the repair.\
+- Once dealer selected, associate invoice with dealer record.\
+\
+**FR-13 (Stretch)** \'96 Inventory Check & Optimization  \
+- For chosen dealer:\
+  - Identify which parts are in-stock vs. missing.\
+- If missing:\
+  - Show a simple optimization suggestion:\
+    - \'93We found missing part X at Dealer B, Y at Dealer C; estimated transfer can complete by [date].\'94\
+- Visualization can be simple (e.g., table or mini-map) but should tell a compelling story.\
+\
+### 4.5 User Experience & Presentation\
+\
+**FR-14** \'96 Main UX Flow  \
+- A web-based or desktop UI separate from the game but easily visible:\
+  1. Landing / Idle screen (waiting for \'93Repair my car\'94).\
+  2. Damage summary screen:\
+     - Car model, crash thumbnail (optional), damage hotspots.\
+  3. Repair estimate screen:\
+     - Parts list, pricing, totals.\
+  4. Dealer selection screen.\
+  5. Appointment confirmation screen.\
+\
+**FR-15** \'96 Big Screen Mode  \
+- UX should work well on:\
+  - Large event display (projector/TV).\
+  - Possibly mirrored from event machine browser.\
+- Fonts, contrast, and layout must be legible from a distance.\
+\
+**FR-16** \'96 Narrative Clarity  \
+- Each key screen should visually/verbally answer:\
+  - \'93What happened?\'94 (crash impact & damage)\
+  - \'93What do we need to fix?\'94 (parts)\
+  - \'93What does it cost?\'94 (estimate)\
+  - \'93Who will fix it?\'94 (dealer)\
+  - \'93How do we ensure parts are available?\'94 (inventory story, if implemented)\
+\
+### 4.6 Integration & Data\
+\
+**FR-17** \'96 GCP Data Access  \
+- If VW parts/dealer data is in GCP:\
+  - Connect to GCP database (read-only).\
+  - Extract required tables/schemas for:\
+    - Parts.\
+    - Pricing.\
+    - Dealers.\
+- If not feasible in time, use stub datasets with similar schema.\
+\
+**FR-18** \'96 Repository & Documentation  \
+- All code in a single Git repository under Object Edge.\
+- Maintain:\
+  - `README.md` with setup and run instructions.\
+  - `ARCHITECTURE.md` with high-level system design.\
+  - `DOMAIN_MODEL.md` for the ontology / knowledge graph.\
+  - `PROGRESS.md` (AI agents\'92 plan/log file) if using Claude\'92s standard pattern.\
+\
+---\
+\
+## 5. Non-Functional Requirements\
+\
+### 5.1 Performance\
+\
+- Single race \uc0\u8594  telemetry \u8594  estimate pipeline should complete in **\u8804  3\'965 seconds** under demo conditions.\
+- UI transitions must feel snappy; no multi-minute waits.\
+\
+### 5.2 Reliability & Resilience\
+\
+- Solution must be stable enough to run multiple demos during the event day:\
+  - Handle at least **dozens of runs** without restart.\
+- If telemetry extraction fails:\
+  - Show a graceful error screen and allow a retry run.\
+\
+### 5.3 Security & Privacy\
+\
+- No sensitive PII required; if any emails/names are captured, they may be fake for demo.\
+- Local-only deployment for event is acceptable; no need for public internet exposure.\
+- If any cloud is used (GCP), secure with standard service credentials; no hard-coded secrets.\
+\
+### 5.4 Maintainability & Handover\
+\
+- Design for **support handoff** to Brazil-based team (e.g., Valmor, Rene) for event day:\
+  - Clear setup script/process.\
+  - Documentation for:\
+    - Restarting services.\
+    - Common failure modes and quick fixes.\
+- Code should be navigable by another dev using AI code assistants with the existing docs.\
+\
+---\
+\
+## 6. Technical Approach\
+\
+### 6.1 Stack\
+\
+- **Core Development:**\
+  - Cloud Code CLI (Claude Code).\
+  - Opus 4.5 Max plan (Anthropic).\
+  - GitHub Copilot as optional assistant inside VS Code.\
+\
+- **Runtime / Hosting:**\
+  - Initial plan: **local hosting** on event machine (no strict need for cloud deployment).\
+  - Optionally: Dockerize and deploy to GCP (Cloud Run or similar) if time allows.\
+\
+- **Language & Frameworks (proposed, can be adjusted by AI-assisted design):**\
+  - Backend: Node.js/TypeScript or Python (choose based on AI plan and dev comfort).\
+  - Frontend: React or simple SPA framework (minimize complexity; prioritize speed).\
+\
+### 6.2 AI-Driven Development Paradigm\
+\
+- Jefin acts as:\
+  - Product Owner.\
+  - Architect.\
+  - AI \'93team lead\'94.\
+- Development pattern:\
+  - Use AI agents to:\
+    - Generate initial architecture and scaffolding.\
+    - Generate and refine modules (BeamNG integration, mapping, UI).\
+    - Maintain documentation files.\
+  - Minimize hand-written code; focus on:\
+    - Requirements.\
+    - Architecture decisions.\
+    - Reviewing and steering AI-generated code.\
+\
+### 6.3 Knowledge & Memory Structures (Internal)\
+\
+- While full ontologies/knowledge graphs are not mandatory for MVP, design to align with:\
+  - **Ontologies/Knowledge Graphs**: parts, models, dealers, inventories.\
+  - **Entity Dossiers**: cars, dealers, invoices as structured entities.\
+  - **Episodic Memory**: each race/repair session logged with key facts (for future analytics/features).\
+\
+---\
+\
+## 7. Event-Day Operational Requirements\
+\
+**OP-1** \'96 Local Support  \
+- At least one engineer/consultant onsite (likely Valmor or Rene) must be able to:\
+  - Start/stop the app.\
+  - Connect app to BeamNG on the event machine.\
+  - Handle basic troubleshooting.\
+\
+**OP-2** \'96 Offline Mode  \
+- System should function with limited or no external internet:\
+  - All critical data (models, parts, dealers) cached locally.\
+\
+**OP-3** \'96 Demo Scripts  \
+- Prepare a simple facilitator script:\
+  - Steps, talking points, and key moments to highlight.\
+  - \'93If something fails, here\'92s the backup story/demo path.\'94\
+\
+---\
+\
+## 8. Open Questions & Assumptions\
+\
+### 8.1 Open Questions\
+\
+1. Exact structure and accessibility of VW parts/dealer data in GCP:\
+   - Who provides credentials?\
+   - What schemas are available?\
+2. Can we modify BeamNG UI to add a native \'93Repair my car\'94 button, or do we need an external trigger/companion app?\
+3. How many dealers and which regions should be represented for the Brand Day narrative?\
+4. Level of realism required for pricing (approximate vs. actual VW pricing).\
+5. Any legal/brand guidelines from VW regarding:\
+   - Showing crash damage.\
+   - Showing repair costs.\
+\
+### 8.2 Assumptions\
+\
+- VW will accept end-of-race batch processing; real-time in-race pricing is not required.\
+- Marketing goal > technical perfection: visual impact and story clarity take precedence over full data accuracy.\
+- It is acceptable to stub or simulate parts of the flow (inventory, appointment scheduling) as long as:\
+  - The narrative is honest about what\'92s real vs. simulated.\
+- Object Edge will have rights to showcase the solution (with VW approval) in case studies.\
+\
+---\
+\
+## 9. Milestones & Timeline (for 1-Week Build)\
+\
+**Day 0\'961**\
+- Finalize PRD (this document) with Rohit and Jags.\
+- Jefin:\
+  - Sets up BeamNG.\
+  - Investigates telemetry access (including Fernando\'92s module).\
+- AI agents generate initial architecture, repo scaffolding, and data models.\
+\
+**Day 2\'963**\
+- Implement BeamNG \uc0\u8594  normalized damage pipeline.\
+- Implement basic ontology & parts mapping with stub data.\
+- Implement core backend services and API endpoints.\
+\
+**Day 4**\
+- Implement UI:\
+  - Damage summary.\
+  - Estimate view.\
+  - Dealer selection.\
+  - Confirmation.\
+\
+**Day 5**\
+- Integrate with GCP data if feasible; otherwise refine stubs.\
+- Add inventory check & simple optimization (if time).\
+- Stabilization, smoke testing, and documentation.\
+\
+**Post-Week**\
+- Iterations with Lucas and VW team (2\'963 days):\
+  - UX tweaks.\
+  - Narrative refinements.\
+  - Data adjustments.\
+- Handover to Brazil team for event prep.\
+\
+---\
+\
+## 10. Acceptance Criteria (MVP)\
+\
+The product is considered MVP-complete when:\
+\
+1. From a completed BeamNG race, a user can:\
+   - Trigger \'93Repair my car\'94.\
+   - See a coherent damage summary.\
+   - See a parts-based repair estimate with a total cost.\
+   - Select a dealer.\
+   - View a final confirmation screen.\
+\
+2. The entire process (race end \uc0\u8594  confirmation screen) functions reliably on the target event machine for multiple runs.\
+\
+3. VW stakeholders can understand, in one guided walkthrough:\
+   - How the crash leads to data.\
+   - How data leads to a repair estimate.\
+   - How this could be extended to real parts, real inventory, and connected-car scenarios.\
+\
+4. All code and documentation are in the Git repo with enough detail for another engineer (with AI tools) to support/extend the solution.\
+\
+---\
+}

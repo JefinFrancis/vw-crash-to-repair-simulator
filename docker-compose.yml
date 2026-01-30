@@ -1,0 +1,218 @@
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: vw_simulator_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: vw_simulator
+      POSTGRES_PASSWORD: vw_simulator_dev
+      POSTGRES_DB: vw_crash_repair
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - vw_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vw_simulator -d vw_crash_repair"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: vw_simulator_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - vw_network
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # FastAPI Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: development
+    container_name: vw_simulator_backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      # Database
+      - DATABASE_URL=postgresql+asyncpg://vw_simulator:vw_simulator_dev@postgres:5432/vw_crash_repair
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_NAME=vw_crash_repair
+      - DATABASE_USER=vw_simulator
+      - DATABASE_PASSWORD=vw_simulator_dev
+      
+      # Cache
+      - REDIS_URL=redis://redis:6379
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      
+      # Application
+      - ENVIRONMENT=local
+      - DEBUG=true
+      - LOG_LEVEL=INFO
+      - API_VERSION=v1
+      - API_PREFIX=/api/v1
+      
+      # CORS
+      - CORS_ORIGINS=["http://localhost:3000","http://localhost:8080","http://127.0.0.1:3000"]
+      
+      # BeamNG Integration
+      - BEAMNG_HOST=localhost
+      - BEAMNG_PORT=25252
+      - BEAMNG_ENABLED=true
+      
+      # Brazilian Settings
+      - TIMEZONE=America/Sao_Paulo
+      - CURRENCY=BRL
+      - LANGUAGE=pt_BR
+      
+      # Security
+      - SECRET_KEY=vw_crash_repair_dev_secret_key_2024
+      - ACCESS_TOKEN_EXPIRE_MINUTES=30
+    volumes:
+      - ./backend:/app
+      - ./backend/logs:/app/logs
+      - ./data:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - vw_network
+    command: poetry run uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir src
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # React Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: development
+    container_name: vw_simulator_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      # API Configuration
+      - VITE_API_URL=http://localhost:8000
+      - VITE_API_PREFIX=/api/v1
+      
+      # Application
+      - VITE_ENVIRONMENT=local
+      - VITE_DEBUG=true
+      
+      # Brazilian Settings
+      - VITE_CURRENCY=BRL
+      - VITE_LANGUAGE=pt_BR
+      - VITE_TIMEZONE=America/Sao_Paulo
+      
+      # BeamNG Integration
+      - VITE_BEAMNG_ENABLED=true
+      
+      # Feature Flags
+      - VITE_ENABLE_DEMO_MODE=true
+      - VITE_ENABLE_TELEMETRY=false
+      
+      # Development
+      - NODE_ENV=development
+      - CHOKIDAR_USEPOLLING=true
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - ./frontend/dist:/app/dist
+    depends_on:
+      - backend
+    networks:
+      - vw_network
+    command: npm run dev -- --host 0.0.0.0 --port 3000
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # pgAdmin (Database Administration)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: vw_simulator_pgadmin
+    restart: unless-stopped
+    ports:
+      - "5050:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@vw-simulator.local
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - postgres
+    networks:
+      - vw_network
+    profiles:
+      - tools
+
+  # Redis Insight (Redis Administration)
+  redis-insight:
+    image: redislabs/redisinsight:latest
+    container_name: vw_simulator_redis_insight
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    volumes:
+      - redis_insight_data:/db
+    depends_on:
+      - redis
+    networks:
+      - vw_network
+    profiles:
+      - tools
+
+# Named volumes for data persistence
+volumes:
+  postgres_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data/postgres
+  redis_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data/redis
+  pgadmin_data:
+    driver: local
+  redis_insight_data:
+    driver: local
+
+# Custom network for service communication
+networks:
+  vw_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16

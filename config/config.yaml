@@ -1,0 +1,18 @@
+api:
+  cors_origins:
+  - http://localhost:8080
+  debug: true
+  host: localhost
+  port: 8000
+beamng:
+  home_path: ''
+  host: localhost
+  port: 25252
+data_dir: data
+database:
+  type: json
+frontend:
+  host: localhost
+  port: 8080
+  static_path: src/frontend/static
+log_level: INFO

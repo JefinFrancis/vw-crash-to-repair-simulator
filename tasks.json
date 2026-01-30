@@ -1,0 +1,170 @@
+{
+  "project": {
+    "name": "VW Crash-to-Repair Simulator",
+    "created": "2026-01-29",
+    "lastUpdated": "2026-01-29"
+  },
+  "columns": {
+    "todo": {
+      "name": "TO DO",
+      "icon": "🔄",
+      "tasks": [
+        {
+          "id": "TASK-001",
+          "title": "Implement real-time damage assessment API endpoint",
+          "description": "Create endpoint that processes BeamNG damage data in real-time",
+          "priority": "high",
+          "estimatedHours": 4,
+          "labels": ["backend", "api"],
+          "assignee": "AI Assistant",
+          "createdDate": "2026-01-29",
+          "dueDate": null,
+          "dependencies": [],
+          "status": "todo"
+        },
+        {
+          "id": "TASK-002",
+          "title": "Add parts availability check integration",
+          "description": "Integrate with parts catalog to check availability and lead times",
+          "priority": "medium",
+          "estimatedHours": 6,
+          "labels": ["backend", "integration"],
+          "assignee": null,
+          "createdDate": "2026-01-29",
+          "dueDate": null,
+          "dependencies": [],
+          "status": "todo"
+        },
+        {
+          "id": "TASK-003",
+          "title": "Implement appointment scheduling with dealer availability",
+          "description": "Create full appointment booking system with calendar integration",
+          "priority": "high",
+          "estimatedHours": 8,
+          "labels": ["backend", "frontend"],
+          "assignee": null,
+          "createdDate": "2026-01-29",
+          "dueDate": null,
+          "dependencies": ["TASK-002"],
+          "status": "todo"
+        }
+      ]
+    },
+    "inProgress": {
+      "name": "IN PROGRESS",
+      "icon": "🚧",
+      "tasks": []
+    },
+    "review": {
+      "name": "REVIEW/TESTING",
+      "icon": "🔍",
+      "tasks": []
+    },
+    "done": {
+      "name": "DONE",
+      "icon": "✅",
+      "tasks": [
+        {
+          "id": "TASK-SETUP-001",
+          "title": "Initial project structure setup",
+          "description": "Created basic project structure with FastAPI backend and HTML frontend",
+          "priority": "high",
+          "estimatedHours": 2,
+          "actualHours": 2,
+          "labels": ["setup", "infrastructure"],
+          "assignee": "AI Assistant",
+          "createdDate": "2026-01-29",
+          "completedDate": "2026-01-29",
+          "status": "done"
+        },
+        {
+          "id": "TASK-SETUP-002",
+          "title": "Basic FastAPI server implementation",
+          "description": "Implemented health check and basic route structure",
+          "priority": "high",
+          "estimatedHours": 3,
+          "actualHours": 3,
+          "labels": ["backend", "api"],
+          "assignee": "AI Assistant",
+          "createdDate": "2026-01-29",
+          "completedDate": "2026-01-29",
+          "status": "done"
+        },
+        {
+          "id": "TASK-SETUP-003",
+          "title": "Frontend structure and basic UI",
+          "description": "Created HTML interface with CSS styling and JavaScript API integration",
+          "priority": "medium",
+          "estimatedHours": 4,
+          "actualHours": 4,
+          "labels": ["frontend", "ui"],
+          "assignee": "AI Assistant",
+          "createdDate": "2026-01-29",
+          "completedDate": "2026-01-29",
+          "status": "done"
+        }
+      ]
+    },
+    "backlog": {
+      "name": "BACKLOG",
+      "icon": "📋",
+      "tasks": [
+        {
+          "id": "TASK-004",
+          "title": "Implement user authentication system",
+          "description": "Add user login/registration with role-based access",
+          "priority": "medium",
+          "estimatedHours": 12,
+          "labels": ["backend", "security"],
+          "assignee": null,
+          "createdDate": "2026-01-29",
+          "dueDate": null,
+          "dependencies": [],
+          "status": "backlog"
+        },
+        {
+          "id": "TASK-005",
+          "title": "Add damage visualization in frontend",
+          "description": "Display vehicle damage visually in the UI",
+          "priority": "low",
+          "estimatedHours": 8,
+          "labels": ["frontend", "visualization"],
+          "assignee": null,
+          "createdDate": "2026-01-29",
+          "dueDate": null,
+          "dependencies": ["TASK-001"],
+          "status": "backlog"
+        },
+        {
+          "id": "TASK-006",
+          "title": "Implement cost estimation algorithms",
+          "description": "Create sophisticated repair cost calculation logic",
+          "priority": "high",
+          "estimatedHours": 10,
+          "labels": ["backend", "algorithms"],
+          "assignee": null,
+          "createdDate": "2026-01-29",
+          "dueDate": null,
+          "dependencies": ["TASK-001", "TASK-002"],
+          "status": "backlog"
+        }
+      ]
+    }
+  },
+  "statistics": {
+    "totalTasks": 9,
+    "completedTasks": 3,
+    "inProgressTasks": 0,
+    "todoTasks": 3,
+    "backlogTasks": 3,
+    "totalEstimatedHours": 57,
+    "completedHours": 9,
+    "remainingHours": 48
+  },
+  "settings": {
+    "taskIdPrefix": "TASK",
+    "priorityLevels": ["low", "medium", "high", "urgent"],
+    "defaultEstimation": 4,
+    "autoAssignToAI": true
+  }
+}
