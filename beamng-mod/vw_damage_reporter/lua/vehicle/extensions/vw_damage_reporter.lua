@@ -19,7 +19,19 @@ M.name = "VW Damage Reporter"
 -- CONFIGURATION
 -- ============================================================================
 local CONFIG = {
-    -- Backend API URL - change this if running on different host/port
+    -- Backend API URL - CHANGE THIS based on your setup:
+    -- 
+    -- LOCAL DEVELOPMENT (Docker/localhost):
+    --   API_URL = "http://localhost:8000/api/v1/beamng/crash-event"
+    --
+    -- GCP CLOUD (Development):
+    --   API_URL = "https://vw-crash-simulator-api-dev-XXXXXX.us-central1.run.app/api/v1/beamng/crash-event"
+    --
+    -- GCP CLOUD (Production):
+    --   API_URL = "https://vw-crash-simulator-api-prod-XXXXXX.us-central1.run.app/api/v1/beamng/crash-event"
+    --
+    -- Replace XXXXXX with your actual Cloud Run project number after deployment
+    
     API_URL = "http://localhost:8000/api/v1/beamng/crash-event",
     
     -- Minimum damage change to trigger a crash event (0.0 - 1.0)

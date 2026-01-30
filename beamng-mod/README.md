@@ -35,7 +35,34 @@ A BeamNG.drive mod that automatically reports vehicle damage to the VW Crash-to-
 
 ## ⚙️ Configuration
 
-Edit the configuration in `lua/vehicle/extensions/vw_damage_reporter.lua`:
+### Quick Setup
+
+Edit `config.lua` in the mod folder to set your backend URL:
+
+```lua
+-- OPTION 1: Local Development (Docker on your machine)
+local BACKEND_URL = "http://localhost:8000"
+
+-- OPTION 2: GCP Cloud - Development
+-- local BACKEND_URL = "https://vw-crash-simulator-api-dev-XXXXXX.us-central1.run.app"
+
+-- OPTION 3: GCP Cloud - Production
+-- local BACKEND_URL = "https://vw-crash-simulator-api-prod-XXXXXX.us-central1.run.app"
+```
+
+### Backend URL Setup
+
+| Environment | URL Format | When to Use |
+|-------------|------------|-------------|
+| **Local** | `http://localhost:8000` | Running Docker Compose locally |
+| **GCP Dev** | `https://vw-crash-simulator-api-dev-XXXX.us-central1.run.app` | Testing on cloud |
+| **GCP Prod** | `https://vw-crash-simulator-api-prod-XXXX.us-central1.run.app` | Production use |
+
+> **Note:** Get your Cloud Run URL from Google Cloud Console → Cloud Run → Services after deployment.
+
+### Advanced Configuration
+
+Edit `lua/vehicle/extensions/vw_damage_reporter.lua` for advanced options:
 
 ```lua
 local CONFIG = {
@@ -70,6 +97,8 @@ local CONFIG = {
 
 ## 🎮 Usage
 
+### Option A: Local Development (Docker)
+
 1. **Start the VW Simulator backend:**
    ```bash
    cd vw-crash-to-repair-simulator
@@ -77,6 +106,17 @@ local CONFIG = {
    ```
 
 2. **Start BeamNG.drive** with the mod installed
+
+### Option B: Cloud Backend (GCP)
+
+1. **Get your Cloud Run URL** from GCP Console
+
+2. **Update `config.lua`:**
+   ```lua
+   local BACKEND_URL = "https://vw-crash-simulator-api-dev-XXXXX.us-central1.run.app"
+   ```
+
+3. **Start BeamNG.drive** - crashes will be sent to the cloud
 
 3. **Spawn any vehicle**
 
