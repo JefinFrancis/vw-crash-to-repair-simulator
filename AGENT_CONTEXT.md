@@ -310,7 +310,7 @@ terraform apply -var-file=environments/prod.tfvars
 | Service | URL |
 |---------|-----|
 | **Backend API** | https://vw-crash-simulator-api-dev-34a3uja3ga-uc.a.run.app |
-| **Frontend** | https://vw-crash-simulator-web-dev-34a3uja3ga-uc.a.run.app |
+| **Frontend** | https://vw-crash-simulator-web-dev-755002618864.us-central1.run.app |
 | **Health Check** | https://vw-crash-simulator-api-dev-34a3uja3ga-uc.a.run.app/api/v1/health/ |
 | **API Docs** | https://vw-crash-simulator-api-dev-34a3uja3ga-uc.a.run.app/docs |
 
@@ -336,13 +336,25 @@ terraform apply -var-file=environments/prod.tfvars
 
 ### To Update BeamNG Mod for Cloud
 
-Edit `beamng-mod/vw_damage_reporter/config.lua`:
+The BeamNG mod runs **locally on the user's Windows PC** where BeamNG.drive is installed. It connects to the backend API via HTTP.
+
+**For cloud deployment**, edit `beamng-mod/vw_damage_reporter/config.lua`:
 ```lua
-local config = {
-    BACKEND_URL = "https://vw-crash-simulator-api-dev-34a3uja3ga-uc.a.run.app",
-    -- ... rest of config
-}
+-- Comment out the local line:
+-- local BACKEND_URL = "http://localhost:8000"
+
+-- Uncomment the cloud line:
+local BACKEND_URL = "https://vw-crash-simulator-api-dev-34a3uja3ga-uc.a.run.app"
 ```
+
+**Installation Steps:**
+1. Edit `config.lua` with the correct backend URL
+2. Copy `beamng-mod/vw_damage_reporter/` folder to:
+   - `%USERPROFILE%/AppData/Local/BeamNG.drive/0.34/mods/unpacked/` (Windows)
+3. Launch BeamNG.drive and enable the mod
+4. The mod will automatically send crash data to the cloud backend
+
+**Note**: BeamNG.drive is Windows-only. The mod connects to whatever backend URL is configured - local Docker or cloud.
 
 **APIs Enabled**:
 - ✅ Cloud Run

@@ -1,0 +1,27 @@
+# Ignore node_modules - installed during build
+node_modules/
+
+# Ignore build outputs
+dist/
+build/
+
+# Development files
+.env
+.env.local
+.env.development
+.env.test
+*.log
+.DS_Store
+.vscode/
+.idea/
+
+# Test files
+coverage/
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+
+# Misc
+*.md
+!README.md

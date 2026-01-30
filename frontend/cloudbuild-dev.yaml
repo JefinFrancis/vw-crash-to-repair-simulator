@@ -1,0 +1,12 @@
+# Cloud Build config for frontend with correct API URL
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '--build-arg'
+      - 'VITE_API_URL=https://vw-crash-simulator-api-dev-34a3uja3ga-uc.a.run.app'
+      - '-t'
+      - 'us-central1-docker.pkg.dev/vw-beamng/vw-crash-simulator/frontend:latest'
+      - '.'
+images:
+  - 'us-central1-docker.pkg.dev/vw-beamng/vw-crash-simulator/frontend:latest'
