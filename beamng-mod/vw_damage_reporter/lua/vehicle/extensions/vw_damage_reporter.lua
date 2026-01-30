@@ -25,14 +25,14 @@ local CONFIG = {
     --   API_URL = "http://localhost:8000/api/v1/beamng/crash-event"
     --
     -- GCP CLOUD (Development):
-    --   API_URL = "https://vw-crash-simulator-api-dev-34a3uja3ga-uc.a.run.app/api/v1/beamng/crash-event"
+    API_URL = "https://vw-crash-simulator-api-dev-34a3uja3ga-uc.a.run.app/api/v1/beamng/crash-event"
     --
     -- GCP CLOUD (Production):
     --   API_URL = "https://vw-crash-simulator-api-prod-XXXXXX.us-central1.run.app/api/v1/beamng/crash-event"
     --
     -- Replace XXXXXX with your actual Cloud Run project number after deployment
     
-    API_URL = "http://localhost:8000/api/v1/beamng/crash-event",
+    -- API_URL = "http://localhost:8000/api/v1/beamng/crash-event",
     
     -- Minimum damage change to trigger a crash event (0.0 - 1.0)
     -- 0.1 = 10% damage increase triggers event
