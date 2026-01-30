@@ -1,0 +1,68 @@
+# VW Crash-to-Repair Simulator - Code Owners
+#
+# This file defines ownership for code review and coordination.
+# Update this as workstreams are assigned.
+#
+# Format: /path/pattern @github-username
+
+# ===================
+# BACKEND
+# ===================
+
+# API Endpoints
+/backend/src/api/v1/beamng.py        # @unassigned - BeamNG integration
+/backend/src/api/v1/vehicles.py      # @unassigned - Vehicle management
+/backend/src/api/v1/damage.py        # @unassigned - Damage analysis
+/backend/src/api/v1/parts.py         # @unassigned - Parts catalog
+/backend/src/api/v1/estimates.py     # @unassigned - Repair estimates
+/backend/src/api/v1/dealers.py       # @unassigned - Dealer network
+/backend/src/api/v1/appointments.py  # @unassigned - Appointment booking
+/backend/src/api/v1/health.py        # @shared - Health checks
+
+# Services
+/backend/src/services/beamng.py          # @unassigned
+/backend/src/services/vehicle.py         # @unassigned
+/backend/src/services/damage_report.py   # @unassigned
+/backend/src/services/part.py            # @unassigned
+/backend/src/services/estimate.py        # @unassigned
+/backend/src/services/dealer.py          # @unassigned
+/backend/src/services/appointment.py     # @unassigned
+
+# Models & Schemas
+/backend/src/models/       # @shared - Database models
+/backend/src/schemas/      # @shared - Pydantic schemas
+
+# ===================
+# FRONTEND
+# ===================
+
+# Pages
+/frontend/src/pages/LandingPage.tsx           # @unassigned
+/frontend/src/pages/SimulationPage.tsx        # @unassigned
+/frontend/src/pages/AnalysisPage.tsx          # @unassigned
+/frontend/src/pages/ResultsPage.tsx           # @unassigned
+/frontend/src/pages/AppointmentPage.tsx       # @unassigned
+/frontend/src/pages/VehicleManagementPage.tsx # @unassigned
+/frontend/src/pages/DealerNetworkPage.tsx     # @unassigned
+/frontend/src/pages/PartsPage.tsx             # @unassigned
+/frontend/src/pages/DamageReportsPage.tsx     # @unassigned
+
+# Services
+/frontend/src/services/    # @shared - API clients
+
+# Components
+/frontend/src/components/  # @shared - Reusable components
+
+# ===================
+# BEAMNG MOD
+# ===================
+
+/beamng-mod/              # @unassigned - Lua mod
+
+# ===================
+# CONFIGURATION
+# ===================
+
+/docker-compose.yml       # @shared - Infrastructure
+/.env*                    # @shared - Environment config
+/AGENT_CONTEXT.md         # @shared - Agent coordination
