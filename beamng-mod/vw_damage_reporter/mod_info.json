@@ -1,0 +1,9 @@
+{
+    "name": "VW Damage Reporter",
+    "description": "Automatically reports vehicle damage to VW Crash-to-Repair Simulator backend for repair estimates",
+    "author": "VW Crash-to-Repair Team",
+    "version": "1.0.0",
+    "beamng_version": "0.31",
+    "website": "https://github.com/vw-crash-to-repair",
+    "tags": ["utility", "damage", "telemetry", "vw"]
+}

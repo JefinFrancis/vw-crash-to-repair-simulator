@@ -1,9 +1,10 @@
 """Modern BeamNG integration API endpoints for VW crash simulation."""
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 import uuid
 import structlog
+from datetime import datetime
 
 from src.services.beamng import BeamNGService
 from src.schemas.beamng import (
@@ -11,7 +12,10 @@ from src.schemas.beamng import (
     BeamNGTelemetry,
     DamageReport,
     BeamNGHealthCheck,
-    BeamNGSession
+    BeamNGSession,
+    LuaModCrashEvent,
+    CrashEventResponse,
+    LatestCrashResponse
 )
 from src.utils.exceptions import BeamNGConnectionError, TelemetryExtractionError
 
@@ -20,6 +24,10 @@ router = APIRouter()
 
 # Dependency to get BeamNG service
 _beamng_service: Optional[BeamNGService] = None
+
+# In-memory storage for crash events (replace with Redis/DB in production)
+_crash_events: List[Dict[str, Any]] = []
+MAX_CRASH_HISTORY = 50
 
 async def get_beamng_service() -> BeamNGService:
     """Dependency to get BeamNG service instance."""
@@ -350,3 +358,200 @@ async def end_session(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Session end error: {str(e)}"
         )
+
+
+# ============================================================================
+# LUA MOD CRASH EVENT ENDPOINTS
+# ============================================================================
+
+@router.post("/crash-event", response_model=CrashEventResponse)
+async def receive_crash_event(
+    event: LuaModCrashEvent,
+    service: BeamNGService = Depends(get_beamng_service)
+) -> CrashEventResponse:
+    """
+    Receive crash event from BeamNG Lua mod.
+    
+    This endpoint is called automatically by the VW Damage Reporter mod
+    when a crash is detected in BeamNG.
+    """
+    global _crash_events
+    
+    try:
+        crash_id = f"CRASH_{int(datetime.now().timestamp())}_{uuid.uuid4().hex[:8]}"
+        
+        logger.info(
+            f"🚨 Crash event received from Lua mod",
+            event_type=event.event_type,
+            vehicle=event.vehicle.model,
+            total_damage=event.damage.total_damage,
+            speed_kmh=event.velocity.speed_kmh
+        )
+        
+        # Process and store crash event
+        crash_data = {
+            "crash_id": crash_id,
+            "received_at": datetime.now().isoformat(),
+            "event_type": event.event_type,
+            "timestamp": event.timestamp,
+            "vehicle": {
+                "id": event.vehicle.id,
+                "name": event.vehicle.name,
+                "model": event.vehicle.model,
+                "brand": event.vehicle.brand,
+                "year": event.vehicle.year
+            },
+            "position": {
+                "x": event.position.x,
+                "y": event.position.y,
+                "z": event.position.z
+            },
+            "velocity": {
+                "speed_kmh": event.velocity.speed_kmh,
+                "speed_ms": event.velocity.speed_ms
+            },
+            "damage": {
+                "total_damage": event.damage.total_damage,
+                "previous_damage": event.damage.previous_damage,
+                "damage_delta": event.damage.damage_delta,
+                "part_damage": event.damage.part_damage,
+                "damage_by_zone": {
+                    "front": event.damage.damage_by_zone.front,
+                    "rear": event.damage.damage_by_zone.rear,
+                    "left": event.damage.damage_by_zone.left,
+                    "right": event.damage.damage_by_zone.right,
+                    "top": event.damage.damage_by_zone.top,
+                    "bottom": event.damage.damage_by_zone.bottom
+                },
+                "broken_parts": event.damage.broken_parts,
+                "broken_parts_count": event.damage.broken_parts_count
+            },
+            "metadata": {
+                "mod_version": event.metadata.mod_version,
+                "beamng_version": event.metadata.beamng_version,
+                "damage_threshold": event.metadata.damage_threshold
+            }
+        }
+        
+        # Add to crash history (keep last N crashes)
+        _crash_events.insert(0, crash_data)
+        if len(_crash_events) > MAX_CRASH_HISTORY:
+            _crash_events = _crash_events[:MAX_CRASH_HISTORY]
+        
+        # Determine damage severity
+        total_damage = event.damage.total_damage
+        if total_damage >= 0.7:
+            severity = "severe"
+        elif total_damage >= 0.4:
+            severity = "moderate"
+        elif total_damage >= 0.2:
+            severity = "minor"
+        else:
+            severity = "minimal"
+        
+        logger.info(
+            f"✅ Crash event processed: {crash_id}",
+            severity=severity,
+            broken_parts=event.damage.broken_parts_count
+        )
+        
+        return CrashEventResponse(
+            success=True,
+            crash_id=crash_id,
+            message=f"Crash event received and processed. Severity: {severity}",
+            damage_summary={
+                "severity": severity,
+                "total_damage_percent": round(total_damage * 100, 1),
+                "broken_parts_count": event.damage.broken_parts_count,
+                "most_damaged_zone": max(
+                    event.damage.damage_by_zone.model_dump().items(),
+                    key=lambda x: x[1]
+                )[0] if total_damage > 0 else "none",
+                "impact_speed_kmh": round(event.velocity.speed_kmh, 1)
+            },
+            estimate_available=True,
+            estimate_url=f"/api/v1/damage/{crash_id}/estimate"
+        )
+        
+    except Exception as e:
+        logger.error(f"Error processing crash event: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to process crash event: {str(e)}"
+        )
+
+
+@router.get("/latest-crash", response_model=LatestCrashResponse)
+async def get_latest_crash() -> LatestCrashResponse:
+    """
+    Get the most recent crash event.
+    
+    Frontend can poll this endpoint to check for new crashes.
+    """
+    if not _crash_events:
+        return LatestCrashResponse(
+            has_crash=False
+        )
+    
+    latest = _crash_events[0]
+    
+    return LatestCrashResponse(
+        has_crash=True,
+        crash_id=latest["crash_id"],
+        crash_time=datetime.fromisoformat(latest["received_at"]),
+        vehicle_model=latest["vehicle"]["model"],
+        total_damage=latest["damage"]["total_damage"],
+        damage_by_zone=latest["damage"]["damage_by_zone"],
+        broken_parts_count=latest["damage"]["broken_parts_count"],
+        speed_at_impact=latest["velocity"]["speed_kmh"],
+        estimate_ready=True
+    )
+
+
+@router.get("/crash-history")
+async def get_crash_history(
+    limit: int = 10,
+    offset: int = 0
+) -> Dict[str, Any]:
+    """
+    Get crash event history.
+    
+    Args:
+        limit: Maximum number of crashes to return (default: 10)
+        offset: Number of crashes to skip (default: 0)
+    """
+    total = len(_crash_events)
+    crashes = _crash_events[offset:offset + limit]
+    
+    return {
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+        "crashes": crashes
+    }
+
+
+@router.get("/crash/{crash_id}")
+async def get_crash_by_id(crash_id: str) -> Dict[str, Any]:
+    """Get a specific crash event by ID."""
+    for crash in _crash_events:
+        if crash["crash_id"] == crash_id:
+            return crash
+    
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail=f"Crash event not found: {crash_id}"
+    )
+
+
+@router.delete("/crash-history")
+async def clear_crash_history() -> Dict[str, Any]:
+    """Clear all crash event history."""
+    global _crash_events
+    count = len(_crash_events)
+    _crash_events = []
+    
+    return {
+        "success": True,
+        "message": f"Cleared {count} crash events"
+    }

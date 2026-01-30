@@ -125,3 +125,130 @@ class BeamNGResponse(BaseModel):
     data: Optional[Dict[str, Any]] = Field(None, description="Response data")
     error: Optional[str] = Field(None, description="Error message if status is error")
     timestamp: datetime = Field(default_factory=datetime.now, description="Response timestamp")
+
+
+# ============================================================================
+# LUA MOD CRASH EVENT SCHEMAS
+# ============================================================================
+
+class LuaModVehicleInfo(BaseModel):
+    """Vehicle information from Lua mod."""
+    id: str = Field(..., description="BeamNG vehicle ID")
+    name: str = Field(default="Unknown Vehicle", description="Vehicle name")
+    model: str = Field(default="unknown", description="Vehicle model identifier")
+    brand: str = Field(default="Unknown", description="Vehicle brand")
+    year: int = Field(default=0, description="Vehicle year")
+    config: str = Field(default="default", description="Vehicle configuration")
+
+
+class LuaModPosition(BaseModel):
+    """Vehicle position from Lua mod."""
+    x: float = Field(default=0, description="X coordinate")
+    y: float = Field(default=0, description="Y coordinate")
+    z: float = Field(default=0, description="Z coordinate")
+
+
+class LuaModVelocity(BaseModel):
+    """Vehicle velocity from Lua mod."""
+    x: float = Field(default=0, description="X velocity component")
+    y: float = Field(default=0, description="Y velocity component")
+    z: float = Field(default=0, description="Z velocity component")
+    speed_ms: float = Field(default=0, description="Speed in m/s")
+    speed_kmh: float = Field(default=0, description="Speed in km/h")
+    speed_mph: float = Field(default=0, description="Speed in mph")
+
+
+class LuaModRotation(BaseModel):
+    """Vehicle rotation quaternion from Lua mod."""
+    x: float = Field(default=0)
+    y: float = Field(default=0)
+    z: float = Field(default=0)
+    w: float = Field(default=1)
+
+
+class LuaModDamageByZone(BaseModel):
+    """Damage categorized by vehicle zone."""
+    front: float = Field(default=0, ge=0, description="Front zone damage")
+    rear: float = Field(default=0, ge=0, description="Rear zone damage")
+    left: float = Field(default=0, ge=0, description="Left side damage")
+    right: float = Field(default=0, ge=0, description="Right side damage")
+    top: float = Field(default=0, ge=0, description="Top/roof damage")
+    bottom: float = Field(default=0, ge=0, description="Bottom/underbody damage")
+
+
+class LuaModDamageData(BaseModel):
+    """Damage data from Lua mod."""
+    total_damage: float = Field(default=0, ge=0, le=1, description="Total damage (0.0-1.0)")
+    previous_damage: float = Field(default=0, ge=0, le=1, description="Previous damage level")
+    damage_delta: float = Field(default=0, description="Change in damage")
+    part_damage: Dict[str, float] = Field(default_factory=dict, description="Damage per part")
+    damage_by_zone: LuaModDamageByZone = Field(default_factory=LuaModDamageByZone)
+    broken_parts: List[str] = Field(default_factory=list, description="List of broken parts")
+    broken_parts_count: int = Field(default=0, description="Number of broken parts")
+
+
+class LuaModMetadata(BaseModel):
+    """Metadata from Lua mod."""
+    mod_version: str = Field(default="1.0.0", description="Lua mod version")
+    beamng_version: str = Field(default="unknown", description="BeamNG version")
+    damage_threshold: float = Field(default=0.1, description="Configured damage threshold")
+
+
+class LuaModCrashEvent(BaseModel):
+    """Crash event received from BeamNG Lua mod."""
+    event_type: str = Field(..., description="Event type (crash_detected, telemetry_update, etc.)")
+    timestamp: int = Field(..., description="Unix timestamp")
+    timestamp_iso: Optional[str] = Field(None, description="ISO format timestamp")
+    
+    vehicle: LuaModVehicleInfo = Field(default_factory=LuaModVehicleInfo)
+    position: LuaModPosition = Field(default_factory=LuaModPosition)
+    velocity: LuaModVelocity = Field(default_factory=LuaModVelocity)
+    rotation: LuaModRotation = Field(default_factory=LuaModRotation)
+    damage: LuaModDamageData = Field(default_factory=LuaModDamageData)
+    metadata: LuaModMetadata = Field(default_factory=LuaModMetadata)
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "event_type": "crash_detected",
+                "timestamp": 1706620800,
+                "timestamp_iso": "2026-01-30T12:00:00Z",
+                "vehicle": {
+                    "id": "vehicle_0",
+                    "name": "T-Cross",
+                    "model": "tcross",
+                    "brand": "Volkswagen",
+                    "year": 2024
+                },
+                "position": {"x": -717.5, "y": 101.2, "z": 118.0},
+                "velocity": {"speed_kmh": 45.5},
+                "damage": {
+                    "total_damage": 0.35,
+                    "damage_delta": 0.25,
+                    "damage_by_zone": {"front": 0.8, "left": 0.2}
+                }
+            }
+        }
+
+
+class CrashEventResponse(BaseModel):
+    """Response to crash event submission."""
+    success: bool = Field(..., description="Whether event was processed successfully")
+    crash_id: str = Field(..., description="Unique crash event ID")
+    message: str = Field(..., description="Response message")
+    damage_summary: Dict[str, Any] = Field(default_factory=dict, description="Summary of damage")
+    estimate_available: bool = Field(default=False, description="Whether estimate is ready")
+    estimate_url: Optional[str] = Field(None, description="URL to view repair estimate")
+
+
+class LatestCrashResponse(BaseModel):
+    """Response containing latest crash data."""
+    has_crash: bool = Field(..., description="Whether there's a recent crash")
+    crash_id: Optional[str] = Field(None, description="Crash event ID")
+    crash_time: Optional[datetime] = Field(None, description="When crash occurred")
+    vehicle_model: Optional[str] = Field(None, description="Vehicle model")
+    total_damage: Optional[float] = Field(None, description="Total damage level")
+    damage_by_zone: Optional[Dict[str, float]] = Field(None, description="Damage by zone")
+    broken_parts_count: Optional[int] = Field(None, description="Number of broken parts")
+    speed_at_impact: Optional[float] = Field(None, description="Speed at impact in km/h")
+    estimate_ready: bool = Field(default=False, description="Whether estimate is calculated")
