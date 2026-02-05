@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
-import { AppRouter } from './Router'
+import { AppRouter } from './AppRouter'
 import { AppProvider } from './store/AppProvider'
 import { DemoModeProvider } from './hooks/useDemoMode'
 import { DemoModeOverlay } from './components/DemoModeOverlay'

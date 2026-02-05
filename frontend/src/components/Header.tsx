@@ -39,20 +39,20 @@ export function Header() {
           <div className="hidden lg:flex items-center space-x-2">
             <div className="flex items-center space-x-1 text-xs">
               <div className={`w-3 h-3 rounded-full ${
-                ['landing', 'simulation', 'analysis', 'results', 'appointment'].includes(currentScreen)
+                ['landing', 'results', 'appointment'].includes(currentScreen)
                   ? 'bg-white' 
                   : 'bg-blue-400'
               }`}></div>
-              <span className="text-blue-200">Simulação</span>
+              <span className="text-blue-200">Veículo</span>
             </div>
             <div className="w-8 h-px bg-blue-400"></div>
             <div className="flex items-center space-x-1 text-xs">
               <div className={`w-3 h-3 rounded-full ${
-                ['analysis', 'results', 'appointment'].includes(currentScreen)
+                ['results', 'appointment'].includes(currentScreen)
                   ? 'bg-white' 
                   : 'bg-blue-400'
               }`}></div>
-              <span className="text-blue-200">Análise</span>
+              <span className="text-blue-200">Sinistros</span>
             </div>
             <div className="w-8 h-px bg-blue-400"></div>
             <div className="flex items-center space-x-1 text-xs">

@@ -2,8 +2,6 @@ import { Link, useLocation } from 'react-router-dom'
 import { 
   Home, 
   Car, 
-  Zap, 
-  Activity,
   Calendar,
   MapPin,
   Wrench,
@@ -17,9 +15,7 @@ export function Sidebar() {
   const currentScreen = useAppStore((state) => state.currentScreen)
   
   const mainWorkflowItems = [
-    { icon: Home, label: 'Início', path: '/', screen: 'landing' },
-    { icon: Zap, label: 'Simulação', path: '/simulation', screen: 'simulation' },
-    { icon: Activity, label: 'Análise', path: '/analysis', screen: 'analysis' },
+    { icon: Home, label: 'Início', path: '/home', screen: 'landing' },
     { icon: FileText, label: 'Sinistros', path: '/results', screen: 'results' },
     { icon: Calendar, label: 'Agendamentos', path: '/appointment', screen: 'appointment' },
   ]

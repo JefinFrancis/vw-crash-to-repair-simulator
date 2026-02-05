@@ -20,6 +20,70 @@ export interface CrashHistoryResponse {
   crashes: any[]
 }
 
+export interface CrashEventSubmission {
+  event_type: string
+  timestamp: number
+  timestamp_iso?: string
+  vehicle: {
+    id: number | string
+    name: string
+    model: string
+    brand: string
+    year?: number
+    plate?: string
+  }
+  position: {
+    x: number
+    y: number
+    z: number
+  }
+  velocity: {
+    x: number
+    y: number
+    z: number
+    speed_ms: number
+    speed_kmh: number
+    speed_mph: number
+  }
+  damage: {
+    total_damage: number
+    previous_damage?: number
+    damage_delta: number
+    part_damage: Record<string, number>
+    damage_by_zone?: {
+      front: number
+      rear: number
+      left: number
+      right: number
+      top: number
+      bottom: number
+    }
+    broken_parts: string[]
+    broken_parts_count: number
+    damaged_parts_count: number
+    total_parts_count: number
+    parts: Array<{
+      name: string
+      partId: string
+      damage: number
+    }>
+  }
+  metadata: {
+    mod_version: string
+    beamng_version: string
+    damage_threshold: number
+  }
+}
+
+export interface CrashEventResponse {
+  success: boolean
+  crash_id: string
+  message: string
+  damage_summary: Record<string, any>
+  estimate_available: boolean
+  estimate_url?: string
+}
+
 /**
  * BeamNG Service - Webhook-based crash detection
  * 
@@ -39,4 +103,8 @@ export const beamngService = {
   // Get specific crash by ID
   getCrashById: (crashId: string): Promise<any> =>
     apiClient.get(`/beamng/crash/${crashId}`),
+
+  // Submit a crash event (for simulated crashes)
+  submitCrashEvent: (crashEvent: CrashEventSubmission): Promise<CrashEventResponse> =>
+    apiClient.post('/beamng/crash-event', crashEvent),
 }

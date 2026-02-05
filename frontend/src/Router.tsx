@@ -1,8 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { Layout } from './components/Layout'
 import { LandingPage } from './pages/LandingPage'
-import { SimulationPage } from './pages/SimulationPage'
-import { AnalysisPage } from './pages/AnalysisPage'
 import { ResultsPage } from './pages/ResultsPage'
 import { AppointmentPage } from './pages/AppointmentPage'
 import { DealerNetworkPage } from './pages/DealerNetworkPage'
@@ -15,8 +13,6 @@ export function AppRouter() {
     <Routes>
       <Route path="/" element={<Layout />}>
         <Route index element={<LandingPage />} />
-        <Route path="/simulation" element={<SimulationPage />} />
-        <Route path="/analysis" element={<AnalysisPage />} />
         <Route path="/results" element={<ResultsPage />} />
         <Route path="/dealers" element={<DealerNetworkPage />} />
         <Route path="/appointment" element={<AppointmentPage />} />

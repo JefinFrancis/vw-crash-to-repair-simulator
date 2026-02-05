@@ -413,11 +413,22 @@ export function DamageReportsPage() {
           {/* Table Body */}
           <div className="divide-y divide-gray-100">
             {filteredCrashes.length === 0 ? (
-              <div className="px-6 py-12 text-center">
-                <FileText className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                <p className="text-gray-500 mb-4">
-                  {crashes.length === 0 ? 'Nenhum sinistro registrado' : 'Nenhum resultado encontrado'}
-                </p>
+              <div className="px-6 py-16 text-center">
+                {crashes.length === 0 ? (
+                  <div className="max-w-md mx-auto">
+                    <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                      <Car className="h-12 w-12 text-green-600" />
+                    </div>
+                    <h3 className="text-2xl font-bold text-gray-800 mb-3">Nenhum sinistro ainda</h3>
+                    <p className="text-lg text-gray-500 mb-2">🚗 Ainda dirigindo por aí...</p>
+                    <p className="text-sm text-gray-400">Os sinistros aparecerão aqui automaticamente quando detectados pelo simulador BeamNG.drive</p>
+                  </div>
+                ) : (
+                  <div>
+                    <FileText className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                    <p className="text-gray-500">Nenhum resultado encontrado para sua busca</p>
+                  </div>
+                )}
               </div>
             ) : (
               filteredCrashes.map((crash, index) => {
