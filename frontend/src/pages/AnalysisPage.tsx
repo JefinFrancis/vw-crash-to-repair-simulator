@@ -73,12 +73,12 @@ export function AnalysisPage() {
   }, [currentDamageAssessment])
 
   const stageLabels: Record<string, string> = {
-    initializing: 'Initializing AI Analysis Engine...',
-    scanning: 'Scanning vehicle structure...',
-    detecting: 'Detecting damage patterns...',
-    classifying: 'Classifying component damage...',
-    calculating: 'Calculating repair estimates...',
-    complete: 'Analysis Complete',
+    initializing: 'Inicializando Motor de Análise IA...',
+    scanning: 'Escaneando estrutura do veículo...',
+    detecting: 'Detectando padrões de danos...',
+    classifying: 'Classificando danos em componentes...',
+    calculating: 'Calculando estimativas de reparo...',
+    complete: 'Análise Concluída',
   }
 
   const handleProceedToResults = () => {
@@ -89,10 +89,10 @@ export function AnalysisPage() {
   const analysisData = currentDamageAssessment || {
     overall_severity: 'moderate',
     component_damages: [
-      { component_name: 'Front Bumper', severity: 'severe', damage_type: 'body_panel' },
-      { component_name: 'Hood', severity: 'moderate', damage_type: 'body_panel' },
-      { component_name: 'Left Headlight', severity: 'severe', damage_type: 'electrical' },
-      { component_name: 'Left Fender', severity: 'moderate', damage_type: 'body_panel' },
+      { component_name: 'Para-choque Dianteiro', severity: 'severe', damage_type: 'body_panel' },
+      { component_name: 'Capô', severity: 'moderate', damage_type: 'body_panel' },
+      { component_name: 'Farol Esquerdo', severity: 'severe', damage_type: 'electrical' },
+      { component_name: 'Paralama Esquerdo', severity: 'moderate', damage_type: 'body_panel' },
     ],
     total_estimated_cost: 6050,
     total_estimated_hours: 13,
@@ -114,10 +114,10 @@ export function AnalysisPage() {
           >
             <h1 className="text-3xl font-bold flex items-center gap-3">
               <Activity className="h-8 w-8 text-vw-blue" />
-              AI Damage Analysis
+              Análise de Danos por IA
             </h1>
             <p className="text-gray-400 mt-2">
-              Advanced computer vision analysis of crash damage
+              Análise avançada de danos de colisão por visão computacional
             </p>
           </motion.div>
         </div>
@@ -140,7 +140,7 @@ export function AnalysisPage() {
                   </div>
                   <div>
                     <h2 className="text-2xl font-bold">VW {selectedVehicle.model}</h2>
-                    <p className="text-gray-400">Year: {selectedVehicle.year} • VIN: {selectedVehicle.vin}</p>
+                    <p className="text-gray-400">Ano: {selectedVehicle.year} • VIN: {selectedVehicle.vin}</p>
                   </div>
                 </div>
               </motion.div>
@@ -155,7 +155,7 @@ export function AnalysisPage() {
             >
               <div className="flex items-center gap-3 mb-4">
                 <Cpu className="h-6 w-6 text-vw-blue" />
-                <h3 className="text-xl font-semibold">Analysis Progress</h3>
+                <h3 className="text-xl font-semibold">Progresso da Análise</h3>
               </div>
 
               <div className="space-y-4">
@@ -220,7 +220,7 @@ export function AnalysisPage() {
               >
                 <div className="flex items-center gap-3 mb-4">
                   <BarChart3 className="h-6 w-6 text-vw-blue" />
-                  <h3 className="text-xl font-semibold">Damage Breakdown</h3>
+                  <h3 className="text-xl font-semibold">Detalhamento dos Danos</h3>
                 </div>
 
                 <div className="space-y-4">
@@ -272,7 +272,7 @@ export function AnalysisPage() {
                 <h3 className={`text-lg font-semibold ${
                   severityColors[analysisData.overall_severity]?.text || 'text-gray-400'
                 }`}>
-                  Overall Severity
+                  Severidade Geral
                 </h3>
               </div>
               <p className={`text-3xl font-bold capitalize ${
@@ -289,22 +289,22 @@ export function AnalysisPage() {
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.1 }}
             >
-              <h3 className="text-lg font-semibold mb-4">Damage Statistics</h3>
+              <h3 className="text-lg font-semibold mb-4">Estatísticas de Danos</h3>
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-400">Total Components</span>
+                  <span className="text-gray-400">Total de Componentes</span>
                   <span className="text-2xl font-bold">{componentDamages.length}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-red-400">Severe</span>
+                  <span className="text-red-400">Severo</span>
                   <span className="text-xl font-bold text-red-400">{severeCounts}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-yellow-400">Moderate</span>
+                  <span className="text-yellow-400">Moderado</span>
                   <span className="text-xl font-bold text-yellow-400">{moderateCounts}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-green-400">Minor</span>
+                  <span className="text-green-400">Leve</span>
                   <span className="text-xl font-bold text-green-400">{minorCounts}</span>
                 </div>
               </div>
@@ -317,12 +317,12 @@ export function AnalysisPage() {
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.2 }}
             >
-              <h3 className="text-lg font-semibold mb-2">Estimated Repair Cost</h3>
+              <h3 className="text-lg font-semibold mb-2">Custo Estimado de Reparo</h3>
               <p className="text-4xl font-bold">
                 ${analysisData.total_estimated_cost?.toLocaleString() || '0'}
               </p>
               <p className="text-blue-200 mt-2">
-                Estimated time: {analysisData.total_estimated_hours || 0} hours
+                Tempo estimado: {analysisData.total_estimated_hours || 0} horas
               </p>
             </motion.div>
 
@@ -337,7 +337,7 @@ export function AnalysisPage() {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
-                View Full Results
+                Ver Resultados Completos
                 <ArrowRight className="h-5 w-5" />
               </motion.button>
             )}

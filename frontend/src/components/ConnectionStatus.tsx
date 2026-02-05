@@ -1,93 +1,46 @@
-import { useEffect } from 'react'
-import { Wifi, WifiOff, AlertCircle } from 'lucide-react'
-import { useAppStore } from '../store/useAppStore'
-import { beamngService } from '../services/beamngService'
-import toast from 'react-hot-toast'
+import { useEffect, useState } from 'react'
+import { Radio, AlertCircle } from 'lucide-react'
+import { beamngService, LatestCrashResponse } from '../services/beamngService'
 
+/**
+ * Crash Detection Status Component
+ * 
+ * Shows the status of crash detection via webhook (no active WebSocket connection).
+ * Polls the backend for the latest crash data.
+ */
 export function ConnectionStatus() {
-  const { beamng, setBeamNGConnection, updateBeamNGStatus } = useAppStore()
+  const [latestCrash, setLatestCrash] = useState<LatestCrashResponse | null>(null)
+  const [isPolling, setIsPolling] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   
   useEffect(() => {
-    // Check BeamNG connection status on mount
-    checkBeamNGConnection()
+    // Poll for latest crash data
+    const checkForCrash = async () => {
+      try {
+        const response = await beamngService.getLatestCrash()
+        setLatestCrash(response)
+        setError(null)
+      } catch (err) {
+        setError('Backend unavailable')
+      }
+    }
     
-    // Set up periodic health checks
-    const interval = setInterval(checkBeamNGConnection, 10000) // Every 10 seconds
+    checkForCrash()
+    const interval = setInterval(checkForCrash, 3000) // Every 3 seconds
     
     return () => clearInterval(interval)
   }, [])
   
-  const checkBeamNGConnection = async () => {
-    try {
-      const response = await beamngService.getHealth()
-      setBeamNGConnection({
-        ...beamng,
-        connected: response.connected || false,
-        status: response.connected ? 'connected' : 'disconnected',
-      })
-    } catch (error) {
-      updateBeamNGStatus('disconnected')
-    }
-  }
-  
-  const handleReconnect = async () => {
-    try {
-      updateBeamNGStatus('connecting')
-      toast.loading('Conectando ao BeamNG...', { id: 'beamng-connect' })
-      
-      const response = await beamngService.connect({
-        host: beamng.host,
-        port: beamng.port,
-        timeout: 30
-      })
-      
-      if (response.data) {
-        setBeamNGConnection(response.data)
-      }
-      toast.success('Connected to BeamNG successfully!', { id: 'beamng-connect' })
-    } catch (error) {
-      updateBeamNGStatus('error')
-      toast.error('Failed to connect to BeamNG', { id: 'beamng-connect' })
-    }
-  }
-  
   const getStatusColor = () => {
-    switch (beamng.status) {
-      case 'connected':
-        return 'bg-green-500'
-      case 'connecting':
-        return 'bg-yellow-500 animate-pulse'
-      case 'error':
-        return 'bg-red-500'
-      default:
-        return 'bg-gray-400'
-    }
+    if (error) return 'bg-red-500'
+    if (latestCrash?.has_crash) return 'bg-green-500 animate-pulse'
+    return 'bg-gray-400'
   }
   
   const getStatusText = () => {
-    switch (beamng.status) {
-      case 'connected':
-        return 'BeamNG Connected'
-      case 'connecting':
-        return 'Connecting...'
-      case 'error':
-        return 'Connection Error'
-      default:
-        return 'BeamNG Disconnected'
-    }
-  }
-  
-  const getStatusIcon = () => {
-    switch (beamng.status) {
-      case 'connected':
-        return <Wifi className="h-4 w-4" />
-      case 'connecting':
-        return <Wifi className="h-4 w-4 animate-pulse" />
-      case 'error':
-        return <AlertCircle className="h-4 w-4" />
-      default:
-        return <WifiOff className="h-4 w-4" />
-    }
+    if (error) return 'Backend indisponível'
+    if (latestCrash?.has_crash) return 'Colisão Detectada'
+    return 'Aguardando colisão...'
   }
   
   return (
@@ -97,40 +50,27 @@ export function ConnectionStatus() {
           <div className="flex items-center space-x-3">
             <div className={`w-3 h-3 rounded-full ${getStatusColor()}`}></div>
             <div className="flex items-center space-x-2">
-              {getStatusIcon()}
+              {error ? (
+                <AlertCircle className="h-4 w-4 text-red-500" />
+              ) : (
+                <Radio className={`h-4 w-4 ${latestCrash?.has_crash ? 'text-green-500' : 'text-gray-400'}`} />
+              )}
               <span className="text-sm font-medium text-gray-700">
                 {getStatusText()}
               </span>
             </div>
           </div>
-          
-          {(beamng.status === 'disconnected' || beamng.status === 'error') && (
-            <button
-              onClick={handleReconnect}
-              className="vw-button-primary text-xs py-1 px-2"
-            >
-              Conectar
-            </button>
-          )}
-          
-          {beamng.status === 'connecting' && (
-            <button
-              className="vw-button-primary text-xs py-1 px-2 opacity-50 cursor-not-allowed"
-              disabled
-            >
-              Conectando...
-            </button>
-          )}
         </div>
         
-        {beamng.connected && beamng.last_heartbeat && (
+        {latestCrash?.has_crash && (
           <div className="mt-2 text-xs text-gray-500">
-            Last connection: {new Date(beamng.last_heartbeat).toLocaleTimeString('en-US')}
+            <div>Dano: {latestCrash.total_damage?.toFixed(1) ?? 0}%</div>
+            <div>Peças: {latestCrash.broken_parts_count ?? 0} danificadas</div>
           </div>
         )}
         
-        <div className="mt-2 text-xs text-gray-500">
-          {beamng.host}:{beamng.port}
+        <div className="mt-2 text-xs text-gray-400">
+          Modo webhook • Atualização automática
         </div>
       </div>
     </div>

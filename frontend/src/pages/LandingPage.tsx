@@ -24,29 +24,29 @@ export function LandingPage() {
     {
       number: 1,
       icon: Zap,
-      title: 'Simulate Crash',
-      description: 'Drive a VW vehicle in BeamNG.drive and execute different collision scenarios',
+      title: 'Simular Colisão',
+      description: 'Dirija um veículo VW no BeamNG.drive e execute diferentes cenários de colisão',
       color: 'text-orange-600 bg-orange-100',
     },
     {
       number: 2,
       icon: Activity,
-      title: 'Analyze Damage',
-      description: 'System analyzes real-time telemetry and identifies damaged components',
+      title: 'Analisar Danos',
+      description: 'O sistema analisa a telemetria em tempo real e identifica os componentes danificados',
       color: 'text-red-600 bg-red-100',
     },
     {
       number: 3,
       icon: FileText,
-      title: 'Calculate Costs',
-      description: 'Automatic repair estimate with pricing and genuine VW parts',
+      title: 'Calcular Custos',
+      description: 'Orçamento automático de reparo com preços e peças genuínas VW',
       color: 'text-blue-600 bg-blue-100',
     },
     {
       number: 4,
       icon: Calendar,
-      title: 'Schedule Repair',
-      description: 'Find nearby dealerships and automatically schedule service appointment',
+      title: 'Agendar Reparo',
+      description: 'Encontre concessionárias próximas e agende o serviço automaticamente',
       color: 'text-green-600 bg-green-100',
     },
   ]
@@ -76,14 +76,14 @@ export function LandingPage() {
             <h1 className="text-5xl lg:text-6xl font-bold mb-6">
               VW Brand Day
               <span className="block text-3xl lg:text-4xl text-blue-300 font-normal mt-2">
-                Crash-to-Repair Experience
+                Experiência Colisão-Reparo
               </span>
             </h1>
             
             <p className="text-xl lg:text-2xl text-blue-200 max-w-3xl mx-auto mb-8">
-              Complete experience: from crash simulation to repair estimation
+              Experiência completa: da simulação de colisão ao orçamento de reparo
               <br />
-              <span className="text-lg">BeamNG.drive Technology + AI + VW Dealer Network</span>
+              <span className="text-lg">Tecnologia BeamNG.drive + IA + Rede de Concessionárias VW</span>
             </p>
             
             {/* Vehicle Selection */}
@@ -96,14 +96,14 @@ export function LandingPage() {
               >
                 <Car className="h-8 w-8 mr-4" />
                 <div className="text-left">
-                  <div className="font-semibold text-lg">Volkswagen {selectedVehicle.model}</div>
-                  <div className="text-blue-200">Year: {selectedVehicle.year} • VIN: {selectedVehicle.vin.slice(-6)}</div>
+                  <div className="font-semibold text-lg">{selectedVehicle.model}</div>
+                  <div className="text-blue-200">Ano: {selectedVehicle.year} • VIN: {selectedVehicle.vin.slice(-6)}</div>
                 </div>
                 <button 
                   onClick={() => setShowVehicleSelector(true)}
                   className="ml-6 px-4 py-2 bg-white bg-opacity-20 rounded-lg hover:bg-opacity-30 transition-all"
                 >
-                  Change
+                  Alterar
                 </button>
               </motion.div>
             ) : (
@@ -114,7 +114,7 @@ export function LandingPage() {
                 transition={{ duration: 0.3 }}
               >
                 <Car className="h-8 w-8 mr-4" />
-                <span className="text-lg">No vehicle selected</span>
+                <span className="text-lg">Nenhum veículo selecionado</span>
               </motion.div>
             )}
             
@@ -126,7 +126,7 @@ export function LandingPage() {
               whileTap={{ scale: 0.95 }}
             >
               <Play className="h-6 w-6 mr-3" />
-              Start Experience
+              Iniciar Experiência
               <ArrowRight className="h-6 w-6 ml-3" />
             </motion.button>
           </motion.div>
@@ -172,23 +172,23 @@ export function LandingPage() {
             transition={{ duration: 0.8, delay: 0.4 }}
           >
             <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-6">
-              <h3 className="text-xl font-semibold mb-3">� Global Market</h3>
+              <h3 className="text-xl font-semibold mb-3">🌐 Mercado Global</h3>
               <p className="text-blue-200">
-                International pricing, dealer validation, and VW dealer network integration
+                Preços internacionais, validação de concessionárias e integração com rede VW
               </p>
             </div>
             
             <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-6">
-              <h3 className="text-xl font-semibold mb-3">⚡ Real-time</h3>
+              <h3 className="text-xl font-semibold mb-3">⚡ Tempo Real</h3>
               <p className="text-blue-200">
-                Real-time BeamNG.drive telemetry with instant damage analysis
+                Telemetria BeamNG.drive em tempo real com análise instantânea de danos
               </p>
             </div>
             
             <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-6">
-              <h3 className="text-xl font-semibold mb-3">🚗 Official VW</h3>
+              <h3 className="text-xl font-semibold mb-3">🚗 VW Oficial</h3>
               <p className="text-blue-200">
-                Official VW parts catalog, real pricing and dealership integration
+                Catálogo oficial de peças VW, preços reais e integração com concessionárias
               </p>
             </div>
           </motion.div>

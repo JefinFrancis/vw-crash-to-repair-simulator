@@ -167,6 +167,16 @@ class LuaModRotation(BaseModel):
     w: float = Field(default=1)
 
 
+class LuaModDamageByZone(BaseModel):
+    """Damage categorized by vehicle zone."""
+    front: float = Field(default=0, ge=0, description="Front zone damage")
+    rear: float = Field(default=0, ge=0, description="Rear zone damage")
+    left: float = Field(default=0, ge=0, description="Left side damage")
+    right: float = Field(default=0, ge=0, description="Right side damage")
+    top: float = Field(default=0, ge=0, description="Top/roof damage")
+    bottom: float = Field(default=0, ge=0, description="Bottom/underbody damage")
+
+
 class LuaModDamagePart(BaseModel):
     """Individual part damage data."""
     name: str = Field(..., description="Part display name")
@@ -179,6 +189,10 @@ class LuaModDamageData(BaseModel):
     total_damage: float = Field(default=0, ge=0, le=1, description="Total damage (0.0-1.0)")
     previous_damage: Optional[float] = Field(default=0, ge=0, le=1, description="Previous damage level")
     damage_delta: float = Field(default=0, description="Change in damage")
+    part_damage: Dict[str, float] = Field(default_factory=dict, description="Damage per part")
+    damage_by_zone: LuaModDamageByZone = Field(default_factory=LuaModDamageByZone, description="Damage by zone")
+    broken_parts: List[str] = Field(default_factory=list, description="List of broken parts")
+    broken_parts_count: int = Field(default=0, description="Number of broken parts")
     damaged_parts_count: int = Field(default=0, description="Number of damaged parts")
     total_parts_count: int = Field(default=0, description="Total number of parts")
     parts: List[LuaModDamagePart] = Field(default_factory=list, description="List of damaged parts with details")

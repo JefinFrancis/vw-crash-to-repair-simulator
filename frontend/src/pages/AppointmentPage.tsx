@@ -36,29 +36,29 @@ const TIME_SLOTS = [
 const SERVICE_TYPES = [
   { 
     id: 'crash_repair', 
-    name: 'Collision Repair', 
-    description: 'Structural and body repairs after collision',
+    name: 'Reparo de Colisão', 
+    description: 'Reparos estruturais e de carroceria após colisão',
     icon: '🔧',
     estimatedHours: 16
   },
   { 
     id: 'mechanical', 
-    name: 'Mechanical', 
-    description: 'Diagnosis and repair of mechanical components',
+    name: 'Mecânica', 
+    description: 'Diagnóstico e reparo de componentes mecânicos',
     icon: '⚙️',
     estimatedHours: 8
   },
   { 
     id: 'paint', 
-    name: 'Paint', 
-    description: 'Body paint and finishing',
+    name: 'Pintura', 
+    description: 'Pintura de carroceria e acabamento',
     icon: '🎨',
     estimatedHours: 12
   },
   { 
     id: 'inspection', 
-    name: 'Inspection', 
-    description: 'Complete vehicle inspection',
+    name: 'Inspeção', 
+    description: 'Inspeção completa do veículo',
     icon: '🔍',
     estimatedHours: 2
   },
@@ -66,14 +66,14 @@ const SERVICE_TYPES = [
 
 // Priority levels
 const PRIORITY_LEVELS = [
-  { id: 'normal', name: 'Normal', description: 'Standard appointment', color: 'gray' },
-  { id: 'high', name: 'High', description: 'Service preference', color: 'yellow' },
-  { id: 'urgent', name: 'Urgent', description: 'Priority service', color: 'red' },
+  { id: 'normal', name: 'Normal', description: 'Agendamento padrão', color: 'gray' },
+  { id: 'high', name: 'Alta', description: 'Preferência de atendimento', color: 'yellow' },
+  { id: 'urgent', name: 'Urgente', description: 'Serviço prioritário', color: 'red' },
 ]
 
 // Format date for display
 const formatDate = (date: Date) => {
-  return new Intl.DateTimeFormat('en-US', {
+  return new Intl.DateTimeFormat('pt-BR', {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
@@ -83,9 +83,9 @@ const formatDate = (date: Date) => {
 
 // Format currency in BRL
 const formatBRL = (value: number) => {
-  return new Intl.NumberFormat('en-US', {
+  return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
-    currency: 'USD',
+    currency: 'BRL',
   }).format(value)
 }
 
@@ -199,10 +199,10 @@ export function AppointmentPage() {
       setBookedAppointment(data)
       setCurrentAppointment(data)
       setCurrentStep('confirmation')
-      toast.success('Appointment confirmed!')
+      toast.success('Agendamento confirmado!')
     },
     onError: (error: any) => {
-      toast.error(error.message || 'Error scheduling appointment')
+      toast.error(error.message || 'Erro ao agendar')
     }
   })
 
@@ -252,10 +252,10 @@ export function AppointmentPage() {
           <div className="space-y-6">
             <div>
               <h2 className="text-2xl font-bold text-gray-800 mb-2">
-                Service Type
+                Tipo de Serviço
               </h2>
               <p className="text-gray-600">
-                Select the service you need
+                Selecione o serviço que você precisa
               </p>
             </div>
 
@@ -292,7 +292,7 @@ export function AppointmentPage() {
 
             {/* Priority Selection */}
             <div className="mt-8">
-              <h3 className="font-semibold text-gray-800 mb-3">Priority</h3>
+              <h3 className="font-semibold text-gray-800 mb-3">Prioridade</h3>
               <div className="flex gap-3">
                 {PRIORITY_LEVELS.map((level) => (
                   <button
@@ -318,10 +318,10 @@ export function AppointmentPage() {
           <div className="space-y-6">
             <div>
               <h2 className="text-2xl font-bold text-gray-800 mb-2">
-                Date and Time
+                Data e Horário
               </h2>
               <p className="text-gray-600">
-                Choose when you would like to bring your vehicle
+                Escolha quando deseja trazer seu veículo
               </p>
             </div>
 
@@ -329,14 +329,14 @@ export function AppointmentPage() {
             <div>
               <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
                 <Calendar className="w-5 h-5" />
-                Select Date
+                Selecione a Data
               </h3>
               <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
                 {availableDates.map((date) => {
                   const isSelected = selectedDate?.toDateString() === date.toDateString()
-                  const dayName = new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(date)
+                  const dayName = new Intl.DateTimeFormat('pt-BR', { weekday: 'short' }).format(date)
                   const dayNum = date.getDate()
-                  const month = new Intl.DateTimeFormat('en-US', { month: 'short' }).format(date)
+                  const month = new Intl.DateTimeFormat('pt-BR', { month: 'short' }).format(date)
                   
                   return (
                     <motion.button
@@ -371,7 +371,7 @@ export function AppointmentPage() {
               >
                 <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
                   <Clock className="w-5 h-5" />
-                  Select Time
+                  Selecione o Horário
                 </h3>
                 <div className="grid grid-cols-4 md:grid-cols-6 gap-2">
                   {TIME_SLOTS.map((time) => {
@@ -405,7 +405,7 @@ export function AppointmentPage() {
               >
                 <p className="text-green-800 font-medium flex items-center gap-2">
                   <CheckCircle className="w-5 h-5" />
-                  Appointment: {formatDate(selectedDate)} at {selectedTime}
+                  Agendamento: {formatDate(selectedDate)} às {selectedTime}
                 </p>
               </motion.div>
             )}
@@ -417,10 +417,10 @@ export function AppointmentPage() {
           <div className="space-y-6">
             <div>
               <h2 className="text-2xl font-bold text-gray-800 mb-2">
-                Your Information
+                Suas Informações
               </h2>
               <p className="text-gray-600">
-                Contact information and vehicle registration
+                Informações de contato e registro do veículo
               </p>
             </div>
 
@@ -441,7 +441,7 @@ export function AppointmentPage() {
                     value={customerInfo.name}
                     onChange={(e) => setCustomerInfo({ ...customerInfo, name: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-vw-blue focus:border-transparent"
-                    placeholder="Your name"
+                    placeholder="Seu nome"
                   />
                 </div>
 
@@ -495,7 +495,7 @@ export function AppointmentPage() {
                         }`}
                       >
                         {method === 'whatsapp' ? 'WhatsApp' : 
-                         method === 'phone' ? 'Call' : 
+                         method === 'phone' ? 'Ligar' : 
                          method === 'email' ? 'E-mail' : 'SMS'}
                       </button>
                     ))}
@@ -508,7 +508,7 @@ export function AppointmentPage() {
             <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
               <h3 className="font-semibold text-gray-800 flex items-center gap-2">
                 <Car className="w-5 h-5" />
-                Vehicle Data
+                Dados do Veículo
               </h3>
               
               <div className="grid gap-4">
@@ -541,7 +541,7 @@ export function AppointmentPage() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Year
+                      Ano
                     </label>
                     <input
                       type="number"
@@ -557,7 +557,7 @@ export function AppointmentPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      License Plate
+                      Placa
                     </label>
                     <input
                       type="text"
@@ -590,14 +590,14 @@ export function AppointmentPage() {
             <div className="bg-white rounded-xl border border-gray-200 p-6">
               <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
                 <FileText className="w-5 h-5" />
-                Observations
+                Observações
               </h3>
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-vw-blue focus:border-transparent"
                 rows={3}
-                placeholder="Describe additional details about the required service..."
+                placeholder="Descreva detalhes adicionais sobre o serviço necessário..."
               />
             </div>
           </div>
@@ -610,10 +610,10 @@ export function AppointmentPage() {
           <div className="space-y-6">
             <div>
               <h2 className="text-2xl font-bold text-gray-800 mb-2">
-                Review Appointment
+                Revisar Agendamento
               </h2>
               <p className="text-gray-600">
-                Check the data before confirming
+                Confira os dados antes de confirmar
               </p>
             </div>
 
@@ -626,8 +626,8 @@ export function AppointmentPage() {
                     <MapPin className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">Dealership</p>
-                    <p className="font-semibold text-gray-800">{dealerName || 'VW Dealer'}</p>
+                    <p className="text-sm text-gray-500">Concessionária</p>
+                    <p className="font-semibold text-gray-800">{dealerName || 'Concessionária VW'}</p>
                   </div>
                 </div>
               </div>
@@ -639,11 +639,11 @@ export function AppointmentPage() {
                     <span className="text-2xl">{service?.icon}</span>
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm text-gray-500">Service</p>
+                    <p className="text-sm text-gray-500">Serviço</p>
                     <p className="font-semibold text-gray-800">{service?.name}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm text-gray-500">Estimated Duration</p>
+                    <p className="text-sm text-gray-500">Duração Estimada</p>
                     <p className="font-semibold text-vw-blue">~{service?.estimatedHours}h</p>
                   </div>
                 </div>
@@ -656,9 +656,9 @@ export function AppointmentPage() {
                     <Calendar className="w-6 h-6 text-green-600" />
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm text-gray-500">Date and Time</p>
+                    <p className="text-sm text-gray-500">Data e Horário</p>
                     <p className="font-semibold text-gray-800">
-                      {selectedDate ? formatDate(selectedDate) : ''} at {selectedTime}
+                      {selectedDate ? formatDate(selectedDate) : ''} às {selectedTime}
                     </p>
                   </div>
                 </div>
@@ -685,7 +685,7 @@ export function AppointmentPage() {
                     <Car className="w-6 h-6 text-blue-600" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">Vehicle</p>
+                    <p className="text-sm text-gray-500">Veículo</p>
                     <p className="font-semibold text-gray-800">
                       {vehicleInfo.make} {vehicleInfo.model} {vehicleInfo.year}
                     </p>
@@ -704,7 +704,7 @@ export function AppointmentPage() {
                       <AlertCircle className="w-6 h-6 text-orange-600" />
                     </div>
                     <div className="flex-1">
-                      <p className="text-sm text-orange-600">Damage Assessment Included</p>
+                      <p className="text-sm text-orange-600">Avaliação de Danos Incluída</p>
                       <p className="font-semibold text-gray-800">
                         {currentDamageAssessment.component_damages?.length || 0} componentes afetados
                       </p>
@@ -721,7 +721,7 @@ export function AppointmentPage() {
 
               {notes && (
                 <div className="bg-gray-50 rounded-xl border border-gray-200 p-4">
-                  <p className="text-sm text-gray-500 mb-1">Observations</p>
+                  <p className="text-sm text-gray-500 mb-1">Observações</p>
                   <p className="text-gray-700">{notes}</p>
                 </div>
               )}
@@ -732,12 +732,12 @@ export function AppointmentPage() {
               <div className="flex gap-3">
                 <Shield className="w-6 h-6 text-vw-blue flex-shrink-0 mt-0.5" />
                 <div className="text-sm text-gray-600">
-                  <p className="font-medium text-gray-800 mb-1">Appointment Terms</p>
+                  <p className="font-medium text-gray-800 mb-1">Termos do Agendamento</p>
                   <ul className="space-y-1">
-                    <li>• Arrive 15 minutes early</li>
-                    <li>• Bring vehicle documents (registration)</li>
-                    <li>• Cancellations must be made 24 hours in advance</li>
-                    <li>• Values are estimates subject to in-person evaluation</li>
+                    <li>• Chegue 15 minutos antes</li>
+                    <li>• Traga os documentos do veículo (CRLV)</li>
+                    <li>• Cancelamentos devem ser feitos com 24 horas de antecedência</li>
+                    <li>• Valores são estimativas sujeitas a avaliação presencial</li>
                   </ul>
                 </div>
               </div>
@@ -759,16 +759,16 @@ export function AppointmentPage() {
 
             <div>
               <h2 className="text-3xl font-bold text-gray-800 mb-2">
-                Appointment Confirmed!
+                Agendamento Confirmado!
               </h2>
               <p className="text-gray-600">
-                Your appointment has been successfully scheduled
+                Seu agendamento foi realizado com sucesso
               </p>
             </div>
 
             {bookedAppointment && (
               <div className="bg-white rounded-xl border-2 border-green-200 p-6 max-w-md mx-auto">
-                <p className="text-sm text-gray-500 mb-2">Confirmation Number</p>
+                <p className="text-sm text-gray-500 mb-2">Número de Confirmação</p>
                 <p className="text-2xl font-mono font-bold text-vw-blue">
                   {bookedAppointment.confirmation_number || bookedAppointment.booking_id?.slice(0, 8).toUpperCase()}
                 </p>
@@ -776,11 +776,11 @@ export function AppointmentPage() {
                 <div className="mt-4 pt-4 border-t border-gray-100 text-left">
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                      <p className="text-gray-500">Date</p>
+                      <p className="text-gray-500">Data</p>
                       <p className="font-medium">{selectedDate ? formatDate(selectedDate) : ''}</p>
                     </div>
                     <div>
-                      <p className="text-gray-500">Time</p>
+                      <p className="text-gray-500">Horário</p>
                       <p className="font-medium">{selectedTime}</p>
                     </div>
                   </div>
@@ -793,13 +793,13 @@ export function AppointmentPage() {
                 onClick={() => navigate('/')}
                 className="w-full py-3 px-6 bg-vw-blue text-white rounded-lg font-semibold hover:bg-vw-dark-blue transition-colors"
               >
-                Back to Home
+                Voltar ao Início
               </button>
               <button
                 onClick={() => navigate('/simulation')}
                 className="w-full py-3 px-6 border-2 border-vw-blue text-vw-blue rounded-lg font-semibold hover:bg-blue-50 transition-colors"
               >
-                New Simulation
+                Nova Simulação
               </button>
             </div>
           </div>
@@ -812,10 +812,10 @@ export function AppointmentPage() {
 
   // Step indicator
   const steps = [
-    { id: 'service', label: 'Service', icon: Wrench },
-    { id: 'datetime', label: 'Date/Time', icon: Calendar },
-    { id: 'customer', label: 'Details', icon: User },
-    { id: 'review', label: 'Review', icon: FileText },
+    { id: 'service', label: 'Serviço', icon: Wrench },
+    { id: 'datetime', label: 'Data/Hora', icon: Calendar },
+    { id: 'customer', label: 'Detalhes', icon: User },
+    { id: 'review', label: 'Revisar', icon: FileText },
   ]
 
   const currentStepIndex = steps.findIndex(s => s.id === currentStep)
@@ -829,8 +829,8 @@ export function AppointmentPage() {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
           >
-            <h1 className="text-3xl font-bold mb-1">📅 Schedule Service</h1>
-            <p className="opacity-90">{dealerName || 'VW Dealership'}</p>
+            <h1 className="text-3xl font-bold mb-1">📅 Agendar Serviço</h1>
+            <p className="opacity-90">{dealerName || 'Concessionária VW'}</p>
           </motion.div>
         </div>
       </div>
@@ -896,7 +896,7 @@ export function AppointmentPage() {
               className="flex items-center gap-2 px-6 py-3 text-gray-600 hover:text-gray-800 transition-colors"
             >
               <ArrowLeft className="w-5 h-5" />
-              Back
+              Voltar
             </button>
 
             <button
@@ -911,16 +911,16 @@ export function AppointmentPage() {
               {bookingMutation.isPending ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
-                  Processing...
+                  Processando...
                 </>
               ) : currentStep === 'review' ? (
                 <>
-                  Confirm Appointment
+                  Confirmar Agendamento
                   <CheckCircle className="w-5 h-5" />
                 </>
               ) : (
                 <>
-                  Continue
+                  Continuar
                   <ArrowRight className="w-5 h-5" />
                 </>
               )}

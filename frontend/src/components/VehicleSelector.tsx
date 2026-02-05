@@ -37,7 +37,7 @@ export function VehicleSelector({ onSelect, onClose }: VehicleSelectorProps) {
         >
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b">
-            <h2 className="text-2xl font-bold text-vw-blue">Select Vehicle</h2>
+            <h2 className="text-2xl font-bold text-vw-blue">Selecionar Veículo</h2>
             <button 
               onClick={onClose}
               className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
@@ -52,7 +52,7 @@ export function VehicleSelector({ onSelect, onClose }: VehicleSelectorProps) {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search by brand, model or VIN..."
+                placeholder="Buscar por marca, modelo ou VIN..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="vw-input pl-10"
@@ -65,13 +65,13 @@ export function VehicleSelector({ onSelect, onClose }: VehicleSelectorProps) {
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-vw-blue"></div>
-                <span className="ml-3 text-gray-600">Loading vehicles...</span>
+                <span className="ml-3 text-gray-600">Carregando veículos...</span>
               </div>
             ) : filteredVehicles.length === 0 ? (
               <div className="text-center py-12 text-gray-500">
                 <Car className="h-16 w-16 mx-auto mb-4 text-gray-300" />
-                <p className="text-lg mb-2">No vehicles found</p>
-                <p className="text-sm">Try adjusting your search or create a new vehicle</p>
+                <p className="text-lg mb-2">Nenhum veículo encontrado</p>
+                <p className="text-sm">Tente ajustar sua busca ou cadastre um novo veículo</p>
               </div>
             ) : (
               <div className="grid gap-4">
@@ -89,10 +89,10 @@ export function VehicleSelector({ onSelect, onClose }: VehicleSelectorProps) {
                       </div>
                       <div>
                         <h3 className="font-semibold text-lg">
-                          Volkswagen {vehicle.model}
+                          {vehicle.model}
                         </h3>
                         <p className="text-gray-600">
-                          Year: {vehicle.year} • VIN: {vehicle.vin}
+                          Ano: {vehicle.year} • VIN: {vehicle.vin}
                         </p>
                         {vehicle.beamng_model && (
                           <p className="text-sm text-vw-blue">
@@ -103,7 +103,7 @@ export function VehicleSelector({ onSelect, onClose }: VehicleSelectorProps) {
                     </div>
                     
                     <button className="vw-button-primary">
-                      Select
+                      Selecionar
                     </button>
                   </motion.div>
                 ))}
@@ -115,13 +115,13 @@ export function VehicleSelector({ onSelect, onClose }: VehicleSelectorProps) {
           <div className="p-6 border-t bg-gray-50">
             <div className="flex justify-between items-center">
               <p className="text-sm text-gray-600">
-                {filteredVehicles.length} vehicle(s) found
+                {filteredVehicles.length} veículo(s) encontrado(s)
               </p>
               <button 
                 onClick={onClose}
                 className="vw-button-secondary"
               >
-                Cancel
+                Cancelar
               </button>
             </div>
           </div>

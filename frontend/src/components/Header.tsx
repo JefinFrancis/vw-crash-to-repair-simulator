@@ -19,7 +19,7 @@ export function Header() {
               </div>
               <div>
                 <h1 className="text-xl font-bold">VW Brand Day</h1>
-                <p className="text-xs text-blue-200">Crash-to-Repair Experience</p>
+                <p className="text-xs text-blue-200">Experiência Batida ao Reparo</p>
               </div>
             </Link>
           </div>
@@ -43,7 +43,7 @@ export function Header() {
                   ? 'bg-white' 
                   : 'bg-blue-400'
               }`}></div>
-              <span className="text-blue-200">Simulation</span>
+              <span className="text-blue-200">Simulação</span>
             </div>
             <div className="w-8 h-px bg-blue-400"></div>
             <div className="flex items-center space-x-1 text-xs">
@@ -52,7 +52,7 @@ export function Header() {
                   ? 'bg-white' 
                   : 'bg-blue-400'
               }`}></div>
-              <span className="text-blue-200">Analysis</span>
+              <span className="text-blue-200">Análise</span>
             </div>
             <div className="w-8 h-px bg-blue-400"></div>
             <div className="flex items-center space-x-1 text-xs">
@@ -61,7 +61,7 @@ export function Header() {
                   ? 'bg-white' 
                   : 'bg-blue-400'
               }`}></div>
-              <span className="text-blue-200">Appointments</span>
+              <span className="text-blue-200">Agendamentos</span>
             </div>
           </div>
 
@@ -70,7 +70,7 @@ export function Header() {
             <button 
               onClick={() => window.location.reload()}
               className="p-2 hover:bg-vw-blue-dark rounded-lg transition-colors"
-              title="Restart Session"
+              title="Reiniciar Sessão"
             >
               <Zap className="h-4 w-4" />
             </button>

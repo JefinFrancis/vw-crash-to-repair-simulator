@@ -50,10 +50,10 @@ export function VehicleManagementPage() {
           >
             <h1 className="text-3xl font-bold flex items-center gap-3">
               <Car className="h-8 w-8" />
-              Vehicle Management
+              Gerenciamento de Veículos
             </h1>
             <p className="text-blue-200 mt-2">
-              Manage VW vehicles available for crash simulation
+              Gerencie os veículos VW disponíveis para simulação de colisão
             </p>
           </motion.div>
         </div>
@@ -71,7 +71,7 @@ export function VehicleManagementPage() {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
             <input
               type="text"
-              placeholder="Search by model, VIN or BeamNG model..."
+              placeholder="Buscar por modelo, VIN ou modelo BeamNG..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-vw-blue focus:border-transparent"
@@ -80,11 +80,11 @@ export function VehicleManagementPage() {
 
           {/* Add Vehicle Button */}
           <button
-            onClick={() => toast.success('Vehicle creation coming soon!')}
+            onClick={() => toast.success('Criação de veículo em breve!')}
             className="vw-btn-primary flex items-center gap-2"
           >
             <Plus className="h-5 w-5" />
-            Add Vehicle
+            Adicionar Veículo
           </button>
         </motion.div>
 
@@ -102,7 +102,7 @@ export function VehicleManagementPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-gray-900">{vehicles.length}</p>
-                <p className="text-sm text-gray-500">Total Vehicles</p>
+                <p className="text-sm text-gray-500">Total de Veículos</p>
               </div>
             </div>
           </div>
@@ -115,7 +115,7 @@ export function VehicleManagementPage() {
                 <p className="text-2xl font-bold text-gray-900">
                   {vehicles.filter(v => v.beamng_model).length}
                 </p>
-                <p className="text-sm text-gray-500">BeamNG Ready</p>
+                <p className="text-sm text-gray-500">Prontos p/ BeamNG</p>
               </div>
             </div>
           </div>
@@ -128,7 +128,7 @@ export function VehicleManagementPage() {
                 <p className="text-2xl font-bold text-gray-900">
                   {new Set(vehicles.map(v => v.model)).size}
                 </p>
-                <p className="text-sm text-gray-500">Unique Models</p>
+                <p className="text-sm text-gray-500">Modelos Únicos</p>
               </div>
             </div>
           </div>
@@ -141,7 +141,7 @@ export function VehicleManagementPage() {
                 <p className="text-2xl font-bold text-gray-900">
                   {new Set(vehicles.map(v => v.year)).size}
                 </p>
-                <p className="text-sm text-gray-500">Model Years</p>
+                <p className="text-sm text-gray-500">Anos de Modelo</p>
               </div>
             </div>
           </div>
@@ -157,11 +157,11 @@ export function VehicleManagementPage() {
           {/* Table Header */}
           <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
             <div className="grid grid-cols-12 gap-4 text-sm font-semibold text-gray-600">
-              <div className="col-span-3">Model</div>
-              <div className="col-span-2">Year</div>
+              <div className="col-span-3">Modelo</div>
+              <div className="col-span-2">Ano</div>
               <div className="col-span-3">VIN</div>
-              <div className="col-span-2">BeamNG Model</div>
-              <div className="col-span-2 text-right">Actions</div>
+              <div className="col-span-2">Modelo BeamNG</div>
+              <div className="col-span-2 text-right">Ações</div>
             </div>
           </div>
 
@@ -170,16 +170,16 @@ export function VehicleManagementPage() {
             {isLoading ? (
               <div className="px-6 py-12 text-center">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-vw-blue mx-auto"></div>
-                <p className="text-gray-500 mt-3">Loading vehicles...</p>
+                <p className="text-gray-500 mt-3">Carregando veículos...</p>
               </div>
             ) : error ? (
               <div className="px-6 py-12 text-center text-red-500">
-                <p>Error loading vehicles. Please try again.</p>
+                <p>Erro ao carregar veículos. Por favor, tente novamente.</p>
               </div>
             ) : filteredVehicles.length === 0 ? (
               <div className="px-6 py-12 text-center">
                 <Car className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                <p className="text-gray-500">No vehicles found</p>
+                <p className="text-gray-500">Nenhum veículo encontrado</p>
               </div>
             ) : (
               filteredVehicles.map((vehicle, index) => (
@@ -212,7 +212,7 @@ export function VehicleManagementPage() {
                         </span>
                       ) : (
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
-                          Not configured
+                          Não configurado
                         </span>
                       )}
                     </div>
@@ -220,21 +220,21 @@ export function VehicleManagementPage() {
                       <button
                         onClick={() => handleViewDetails(vehicle)}
                         className="p-2 text-gray-400 hover:text-vw-blue hover:bg-blue-50 rounded-lg transition-colors"
-                        title="View Details"
+                        title="Ver Detalhes"
                       >
                         <Eye className="h-4 w-4" />
                       </button>
                       <button
-                        onClick={() => toast.success('Edit coming soon!')}
+                        onClick={() => toast.success('Edição em breve!')}
                         className="p-2 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
-                        title="Edit"
+                        title="Editar"
                       >
                         <Edit className="h-4 w-4" />
                       </button>
                       <button
-                        onClick={() => toast.error('Delete not allowed in demo')}
+                        onClick={() => toast.error('Exclusão não permitida na demo')}
                         className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                        title="Delete"
+                        title="Excluir"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -248,7 +248,7 @@ export function VehicleManagementPage() {
           {/* Table Footer */}
           <div className="bg-gray-50 px-6 py-3 border-t border-gray-200">
             <p className="text-sm text-gray-500">
-              Showing {filteredVehicles.length} of {vehicles.length} vehicles
+              Exibindo {filteredVehicles.length} de {vehicles.length} veículos
             </p>
           </div>
         </motion.div>
@@ -282,11 +282,11 @@ export function VehicleManagementPage() {
               <div className="p-6 overflow-y-auto">
                 <div className="grid grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-500 mb-1">Model</label>
+                    <label className="block text-sm font-medium text-gray-500 mb-1">Modelo</label>
                     <p className="text-lg font-semibold">{selectedVehicle.model}</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-500 mb-1">Year</label>
+                    <label className="block text-sm font-medium text-gray-500 mb-1">Ano</label>
                     <p className="text-lg font-semibold">{selectedVehicle.year}</p>
                   </div>
                   <div className="col-span-2">
@@ -294,14 +294,14 @@ export function VehicleManagementPage() {
                     <p className="text-lg font-mono">{selectedVehicle.vin}</p>
                   </div>
                   <div className="col-span-2">
-                    <label className="block text-sm font-medium text-gray-500 mb-1">BeamNG Model</label>
+                    <label className="block text-sm font-medium text-gray-500 mb-1">Modelo BeamNG</label>
                     <p className="text-lg font-semibold">
-                      {selectedVehicle.beamng_model || 'Not configured'}
+                      {selectedVehicle.beamng_model || 'Não configurado'}
                     </p>
                   </div>
                   {selectedVehicle.beamng_config && (
                     <div className="col-span-2">
-                      <label className="block text-sm font-medium text-gray-500 mb-1">BeamNG Configuration</label>
+                      <label className="block text-sm font-medium text-gray-500 mb-1">Configuração BeamNG</label>
                       <div className="bg-gray-100 rounded-lg p-4 overflow-x-auto max-h-64">
                         <pre className="text-xs text-gray-700">
                           {JSON.stringify(JSON.parse(selectedVehicle.beamng_config), null, 2)}
@@ -318,14 +318,14 @@ export function VehicleManagementPage() {
                   onClick={() => setShowDetails(false)}
                   className="vw-btn-secondary"
                 >
-                  Close
+                  Fechar
                 </button>
                 <button
-                  onClick={() => toast.success('Edit coming soon!')}
+                  onClick={() => toast.success('Edição em breve!')}
                   className="vw-btn-primary flex items-center gap-2"
                 >
                   <Edit className="h-4 w-4" />
-                  Edit Vehicle
+                  Editar Veículo
                 </button>
               </div>
             </motion.div>

@@ -37,10 +37,10 @@ const BRAZILIAN_STATES = [
 
 // Service types
 const SERVICE_TYPES = [
-  { id: 'bodyshop', name: 'Body Shop', icon: '🔧' },
-  { id: 'service', name: 'Mechanics', icon: '⚙️' },
-  { id: 'parts', name: 'Parts', icon: '📦' },
-  { id: 'sales', name: 'Sales', icon: '🚗' },
+  { id: 'bodyshop', name: 'Funilaria', icon: '🔧' },
+  { id: 'service', name: 'Mecânica', icon: '⚙️' },
+  { id: 'parts', name: 'Peças', icon: '📦' },
+  { id: 'sales', name: 'Vendas', icon: '🚗' },
 ]
 
 interface Dealer {
@@ -121,13 +121,13 @@ export function DealerNetworkPage() {
   // Handle dealer selection
   const handleSelectDealer = (dealer: Dealer) => {
     setSelectedDealer(dealer)
-    toast.success(`${dealer.name} selected!`)
+    toast.success(`${dealer.name} selecionada!`)
   }
 
   // Proceed to appointment
   const handleProceedToAppointment = () => {
     if (!selectedDealer) {
-      toast.error('Select a dealership first')
+      toast.error('Selecione uma concessionária primeiro')
       return
     }
     
@@ -153,9 +153,9 @@ export function DealerNetworkPage() {
       },
       status_info: {
         status: 'pending',
-        status_description: 'Appointment pending',
+        status_description: 'Agendamento pendente',
         last_updated: new Date().toISOString(),
-        next_actions: ['Confirm appointment'],
+        next_actions: ['Confirmar agendamento'],
         can_reschedule: true,
         can_cancel: true,
       },
@@ -175,9 +175,9 @@ export function DealerNetworkPage() {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
           >
-            <h1 className="text-4xl font-bold mb-2">🏦 Dealer Network</h1>
+            <h1 className="text-4xl font-bold mb-2">🏦 Rede de Concessionárias</h1>
             <p className="text-vw-blue-light">
-              Find the nearest VW dealership for your repair
+              Encontre a concessionária VW mais próxima para seu reparo
             </p>
           </motion.div>
         </div>
@@ -195,11 +195,11 @@ export function DealerNetworkPage() {
               <Car className="h-6 w-6 text-amber-600" />
               <div>
                 <p className="font-medium text-amber-900">
-                  Estimated budget: $ {currentDamageAssessment.total_estimated_cost.toLocaleString('en-US')}
+                  Orçamento estimado: R$ {currentDamageAssessment.total_estimated_cost.toLocaleString('pt-BR')}
                 </p>
                 <p className="text-sm text-amber-700">
-                  {currentDamageAssessment.component_damages?.length || 0} affected components • 
-                  {currentDamageAssessment.total_estimated_hours}h repair time
+                  {currentDamageAssessment.component_damages?.length || 0} componentes afetados • 
+                  {currentDamageAssessment.total_estimated_hours}h tempo de reparo
                 </p>
               </div>
             </div>
@@ -218,7 +218,7 @@ export function DealerNetworkPage() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search by name, city or address..."
+                placeholder="Buscar por nome, cidade ou endereço..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-vw-blue focus:border-transparent"
@@ -231,7 +231,7 @@ export function DealerNetworkPage() {
               onChange={(e) => setSelectedState(e.target.value)}
               className="px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-vw-blue focus:border-transparent"
             >
-              <option value="">All States</option>
+              <option value="">Todos os Estados</option>
               {BRAZILIAN_STATES.map((state) => (
                 <option key={state.code} value={state.code}>
                   {state.name}
@@ -258,7 +258,7 @@ export function DealerNetworkPage() {
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
             >
-              <p className="text-sm font-medium text-gray-700 mb-3">Available services:</p>
+              <p className="text-sm font-medium text-gray-700 mb-3">Serviços disponíveis:</p>
               <div className="flex flex-wrap gap-2">
                 {SERVICE_TYPES.map((service) => (
                   <button
@@ -290,20 +290,20 @@ export function DealerNetworkPage() {
           <div className="lg:col-span-2">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold">
-                {filteredDealers.length} dealership{filteredDealers.length !== 1 ? 's' : ''} found
+                {filteredDealers.length} concessionária{filteredDealers.length !== 1 ? 's' : ''} encontrada{filteredDealers.length !== 1 ? 's' : ''}
               </h2>
             </div>
 
             {isLoading ? (
               <div className="vw-card text-center py-12">
                 <div className="animate-spin h-8 w-8 border-b-2 border-vw-blue mx-auto mb-4 rounded-full"></div>
-                <p className="text-gray-500">Loading dealers...</p>
+                <p className="text-gray-500">Carregando concessionárias...</p>
               </div>
             ) : filteredDealers.length === 0 ? (
               <div className="vw-card text-center py-12">
                 <Building2 className="h-16 w-16 mx-auto mb-4 text-gray-300" />
-                <p className="text-gray-500 mb-2">No dealerships found</p>
-                <p className="text-sm text-gray-400">Try adjusting search filters</p>
+                <p className="text-gray-500 mb-2">Nenhuma concessionária encontrada</p>
+                <p className="text-sm text-gray-400">Tente ajustar os filtros de busca</p>
               </div>
             ) : (
               <div className="space-y-4">
@@ -360,10 +360,10 @@ export function DealerNetworkPage() {
                               key={service}
                               className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded"
                             >
-                              {service === 'bodyshop' ? '🔧 Body Shop' :
-                               service === 'service' ? '⚙️ Mechanics' :
-                               service === 'parts' ? '📦 Parts' :
-                               service === 'sales' ? '🚗 Sales' : service}
+                              {service === 'bodyshop' ? '🔧 Funilaria' :
+                               service === 'service' ? '⚙️ Mecânica' :
+                               service === 'parts' ? '📦 Peças' :
+                               service === 'sales' ? '🚗 Vendas' : service}
                             </span>
                           ))}
                         </div>
@@ -401,7 +401,7 @@ export function DealerNetworkPage() {
               >
                 <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
                   <Building2 className="h-5 w-5 text-vw-blue" />
-                  Selected Dealership
+                  Concessionária Selecionada
                 </h2>
 
                 <div className="space-y-4">
@@ -438,17 +438,17 @@ export function DealerNetworkPage() {
                   </div>
 
                   <div className="pt-4 border-t">
-                    <h4 className="font-medium mb-2">Specialties</h4>
+                    <h4 className="font-medium mb-2">Especialidades</h4>
                     <div className="flex flex-wrap gap-2">
                       {selectedDealer.specialties?.map((specialty) => (
                         <span
                           key={specialty}
                           className="px-2 py-1 text-xs bg-vw-blue/10 text-vw-blue rounded"
                         >
-                          {specialty === 'collision_repair' ? 'Collision Repair' :
-                           specialty === 'paint' ? 'Paint Shop' :
-                           specialty === 'electrical' ? 'Electrical' :
-                           specialty === 'warranty' ? 'Warranty' :
+                          {specialty === 'collision_repair' ? 'Reparo de Colisão' :
+                           specialty === 'paint' ? 'Pintura' :
+                           specialty === 'electrical' ? 'Elétrica' :
+                           specialty === 'warranty' ? 'Garantia' :
                            specialty === 'performance' ? 'Performance' : specialty}
                         </span>
                       ))}
@@ -460,7 +460,7 @@ export function DealerNetworkPage() {
                     className="w-full vw-btn-primary flex items-center justify-center gap-2 mt-4"
                   >
                     <Clock className="h-5 w-5" />
-                    Schedule Repair
+                    Agendar Reparo
                   </button>
 
                   {selectedDealer.latitude && selectedDealer.longitude && (
@@ -471,7 +471,7 @@ export function DealerNetworkPage() {
                       className="w-full vw-btn-outline flex items-center justify-center gap-2"
                     >
                       <Navigation className="h-5 w-5" />
-                      Open in Maps
+                      Abrir no Maps
                     </a>
                   )}
                 </div>
@@ -483,9 +483,9 @@ export function DealerNetworkPage() {
                 animate={{ opacity: 1 }}
               >
                 <MapPin className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                <p className="text-gray-500 mb-2">Select a dealership</p>
+                <p className="text-gray-500 mb-2">Selecione uma concessionária</p>
                 <p className="text-sm text-gray-400">
-                  Click on one of the dealerships on the left to see more details
+                  Clique em uma das concessionárias à esquerda para ver mais detalhes
                 </p>
               </motion.div>
             )}
@@ -502,7 +502,7 @@ export function DealerNetworkPage() {
                 Precisa de ajuda?
               </h3>
               <p className="text-sm text-gray-600 mb-3">
-                Our customer service center can help you find the best option for your repair.
+                Nossa central de atendimento pode ajudá-lo a encontrar a melhor opção para seu reparo.
               </p>
               <a
                 href="tel:08007022470"

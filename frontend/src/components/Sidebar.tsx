@@ -17,18 +17,18 @@ export function Sidebar() {
   const currentScreen = useAppStore((state) => state.currentScreen)
   
   const mainWorkflowItems = [
-    { icon: Home, label: 'Home', path: '/', screen: 'landing' },
-    { icon: Zap, label: 'Simulation', path: '/simulation', screen: 'simulation' },
-    { icon: Activity, label: 'Analysis', path: '/analysis', screen: 'analysis' },
-    { icon: FileText, label: 'Resultados', path: '/results', screen: 'results' },
-    { icon: Calendar, label: 'Appointments', path: '/appointment', screen: 'appointment' },
+    { icon: Home, label: 'Início', path: '/', screen: 'landing' },
+    { icon: Zap, label: 'Simulação', path: '/simulation', screen: 'simulation' },
+    { icon: Activity, label: 'Análise', path: '/analysis', screen: 'analysis' },
+    { icon: FileText, label: 'Sinistros', path: '/results', screen: 'results' },
+    { icon: Calendar, label: 'Agendamentos', path: '/appointment', screen: 'appointment' },
   ]
   
   const managementItems = [
-    { icon: Car, label: 'Vehicles', path: '/vehicles' },
-    { icon: MapPin, label: 'Dealers', path: '/dealers' },
-    { icon: Wrench, label: 'Parts', path: '/parts' },
-    { icon: ClipboardList, label: 'Reports', path: '/damage-reports' },
+    { icon: Car, label: 'Veículos', path: '/vehicles' },
+    { icon: MapPin, label: 'Concessionárias', path: '/dealers' },
+    { icon: Wrench, label: 'Peças', path: '/parts' },
+    { icon: ClipboardList, label: 'Relatórios', path: '/damage-reports' },
   ]
   
   return (
@@ -41,7 +41,7 @@ export function Sidebar() {
           </h2>
           <nav className="space-y-1">
             {mainWorkflowItems.map((item) => {
-              const isActive = location.pathname === item.path || currentScreen === item.screen
+              const isActive = location.pathname === item.path
               const Icon = item.icon
               
               return (
@@ -68,7 +68,7 @@ export function Sidebar() {
         {/* Management Section */}
         <div>
           <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
-            Management
+            Gerenciamento
           </h2>
           <nav className="space-y-1">
             {managementItems.map((item) => {
