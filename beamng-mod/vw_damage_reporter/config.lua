@@ -39,5 +39,5 @@ return {
     CRASH_COOLDOWN = 5.0,
     
     -- Enable debug mode for troubleshooting
-    DEBUG = false,
+    DEBUG = true,
 }

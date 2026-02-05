@@ -133,12 +133,13 @@ class BeamNGResponse(BaseModel):
 
 class LuaModVehicleInfo(BaseModel):
     """Vehicle information from Lua mod."""
-    id: str = Field(..., description="BeamNG vehicle ID")
+    id: Any = Field(..., description="BeamNG vehicle ID")
     name: str = Field(default="Unknown Vehicle", description="Vehicle name")
     model: str = Field(default="unknown", description="Vehicle model identifier")
     brand: str = Field(default="Unknown", description="Vehicle brand")
     year: int = Field(default=0, description="Vehicle year")
-    config: str = Field(default="default", description="Vehicle configuration")
+    plate: Optional[str] = Field(default="N/A", description="Vehicle license plate")
+    config: Optional[str] = Field(default=None, description="Vehicle configuration (legacy)")
 
 
 class LuaModPosition(BaseModel):
@@ -166,25 +167,21 @@ class LuaModRotation(BaseModel):
     w: float = Field(default=1)
 
 
-class LuaModDamageByZone(BaseModel):
-    """Damage categorized by vehicle zone."""
-    front: float = Field(default=0, ge=0, description="Front zone damage")
-    rear: float = Field(default=0, ge=0, description="Rear zone damage")
-    left: float = Field(default=0, ge=0, description="Left side damage")
-    right: float = Field(default=0, ge=0, description="Right side damage")
-    top: float = Field(default=0, ge=0, description="Top/roof damage")
-    bottom: float = Field(default=0, ge=0, description="Bottom/underbody damage")
+class LuaModDamagePart(BaseModel):
+    """Individual part damage data."""
+    name: str = Field(..., description="Part display name")
+    partId: str = Field(..., description="Part identifier")
+    damage: float = Field(default=0, ge=0, le=1, description="Part damage level (0.0-1.0)")
 
 
 class LuaModDamageData(BaseModel):
     """Damage data from Lua mod."""
     total_damage: float = Field(default=0, ge=0, le=1, description="Total damage (0.0-1.0)")
-    previous_damage: float = Field(default=0, ge=0, le=1, description="Previous damage level")
+    previous_damage: Optional[float] = Field(default=0, ge=0, le=1, description="Previous damage level")
     damage_delta: float = Field(default=0, description="Change in damage")
-    part_damage: Dict[str, float] = Field(default_factory=dict, description="Damage per part")
-    damage_by_zone: LuaModDamageByZone = Field(default_factory=LuaModDamageByZone)
-    broken_parts: List[str] = Field(default_factory=list, description="List of broken parts")
-    broken_parts_count: int = Field(default=0, description="Number of broken parts")
+    damaged_parts_count: int = Field(default=0, description="Number of damaged parts")
+    total_parts_count: int = Field(default=0, description="Total number of parts")
+    parts: List[LuaModDamagePart] = Field(default_factory=list, description="List of damaged parts with details")
 
 
 class LuaModMetadata(BaseModel):
@@ -214,18 +211,25 @@ class LuaModCrashEvent(BaseModel):
                 "timestamp": 1706620800,
                 "timestamp_iso": "2026-01-30T12:00:00Z",
                 "vehicle": {
-                    "id": "vehicle_0",
+                    "id": 1234,
                     "name": "T-Cross",
                     "model": "tcross",
                     "brand": "Volkswagen",
-                    "year": 2024
+                    "year": 2024,
+                    "plate": "ABC-1234"
                 },
                 "position": {"x": -717.5, "y": 101.2, "z": 118.0},
-                "velocity": {"speed_kmh": 45.5},
+                "velocity": {"x": 10.5, "y": 2.3, "z": 0.1, "speed_ms": 12.6, "speed_kmh": 45.5, "speed_mph": 28.3},
                 "damage": {
                     "total_damage": 0.35,
                     "damage_delta": 0.25,
-                    "damage_by_zone": {"front": 0.8, "left": 0.2}
+                    "damaged_parts_count": 3,
+                    "total_parts_count": 42,
+                    "parts": [
+                        {"name": "Front Bumper", "partId": "bumper_F", "damage": 0.8},
+                        {"name": "Hood", "partId": "hood", "damage": 0.5},
+                        {"name": "Left Fender", "partId": "fender_L", "damage": 0.2}
+                    ]
                 }
             }
         }
@@ -248,7 +252,7 @@ class LatestCrashResponse(BaseModel):
     crash_time: Optional[datetime] = Field(None, description="When crash occurred")
     vehicle_model: Optional[str] = Field(None, description="Vehicle model")
     total_damage: Optional[float] = Field(None, description="Total damage level")
-    damage_by_zone: Optional[Dict[str, float]] = Field(None, description="Damage by zone")
-    broken_parts_count: Optional[int] = Field(None, description="Number of broken parts")
+    damaged_parts_count: Optional[int] = Field(None, description="Number of damaged parts")
+    damaged_parts: Optional[List[Dict[str, Any]]] = Field(None, description="List of damaged parts")
     speed_at_impact: Optional[float] = Field(None, description="Speed at impact in km/h")
     estimate_ready: bool = Field(default=False, description="Whether estimate is calculated")
