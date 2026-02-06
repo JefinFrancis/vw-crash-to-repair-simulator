@@ -71,9 +71,10 @@ const PRIORITY_LEVELS = [
   { id: 'urgent', name: 'Urgente', description: 'Serviço prioritário', color: 'red' },
 ]
 
-// Format date for display
+// Format date for display in BRT (UTC-3)
 const formatDate = (date: Date) => {
   return new Intl.DateTimeFormat('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
     weekday: 'long',
     year: 'numeric',
     month: 'long',

@@ -29,16 +29,19 @@ const formatBRL = (value: number) => {
   }).format(value)
 }
 
-// Format date
+// Format date in Brazilian format, always as BRT (UTC-3)
 const formatDate = (dateString: string) => {
   const date = new Date(dateString)
-  return date.toLocaleDateString('pt-BR', {
+  const formatted = date.toLocaleString('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
+    hour12: false
   })
+  return `${formatted} BRT`
 }
 
 const severityColors: Record<string, string> = {

@@ -56,16 +56,20 @@ const formatBRL = (value: number) => {
   }).format(value)
 }
 
-// Format date in Brazilian format
+// Format date in Brazilian format, always as BRT (UTC-3)
 const formatDate = (dateString: string) => {
   const date = new Date(dateString)
-  return date.toLocaleDateString('pt-BR', {
+  // Use America/Sao_Paulo timezone to ensure consistent BRT display
+  const formatted = date.toLocaleString('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
+    hour12: false
   })
+  return `${formatted} BRT`
 }
 
 // Get severity from damage percentage
@@ -187,6 +191,18 @@ export function ResultsPage() {
   const [isSimulating, setIsSimulating] = useState(false)
   const [simulationProgress, setSimulationProgress] = useState(0)
   const [showLanding, setShowLanding] = useState(true)
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [analysisStep, setAnalysisStep] = useState(0)
+  const [pendingCrash, setPendingCrash] = useState<CrashItem | null>(null)
+
+  // Analysis steps for the AI evaluation animation
+  const analysisSteps = [
+    { icon: '📡', title: 'Recebendo dados do sensor', description: 'Coletando telemetria da colisão...' },
+    { icon: '🔍', title: 'Analisando impacto', description: 'Calculando forças de deformação...' },
+    { icon: '🤖', title: 'Processamento IA', description: 'Identificando componentes danificados...' },
+    { icon: '🔧', title: 'Avaliando reparos', description: 'Estimando custos e tempo de mão de obra...' },
+    { icon: '📊', title: 'Gerando relatório', description: 'Preparando análise completa...' },
+  ]
 
   // Handle landing page option selection
   const handleDriveInBeamNG = () => {
@@ -240,8 +256,46 @@ export function ResultsPage() {
     fetchCrashHistory()
   }, [selectedVehicle, setSelectedVehicle])
 
-  // View crash details
+  // Auto-poll for new crashes when not on landing page (user chose "Drive in BeamNG")
+  useEffect(() => {
+    if (showLanding || selectedCrash) return // Don't poll on landing or detail view
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const history = await beamngService.getCrashHistory(50, 0)
+        if (history.crashes && history.crashes.length > 0) {
+          // Check if there are new crashes
+          const currentFirstId = crashes[0]?.crash_id
+          const newFirstId = history.crashes[0]?.crash_id
+          if (newFirstId && newFirstId !== currentFirstId) {
+            setCrashes(history.crashes)
+            toast.success('🚨 Nova colisão detectada!', { icon: '🚗💥' })
+          }
+        }
+      } catch (err) {
+        // Silently fail on poll errors
+        console.debug('Poll error:', err)
+      }
+    }, 5000) // Poll every 5 seconds
+
+    return () => clearInterval(pollInterval)
+  }, [showLanding, selectedCrash, crashes])
+
+  // View crash details with AI analysis animation
   const viewCrashDetails = async (crash: CrashItem) => {
+    setPendingCrash(crash)
+    setIsAnalyzing(true)
+    setAnalysisStep(0)
+
+    // Animate through analysis steps
+    for (let step = 0; step < 5; step++) {
+      await new Promise(r => setTimeout(r, 800))
+      setAnalysisStep(step + 1)
+    }
+
+    // Final delay before showing results
+    await new Promise(r => setTimeout(r, 500))
+
     try {
       const fullCrash = await beamngService.getCrashById(crash.crash_id)
       const assessment = transformCrashToAssessment(fullCrash, vehicleToUse)
@@ -250,6 +304,9 @@ export function ResultsPage() {
       const assessment = transformCrashToAssessment(crash, vehicleToUse)
       setSelectedCrash(assessment)
     }
+
+    setIsAnalyzing(false)
+    setPendingCrash(null)
   }
 
   const backToList = () => setSelectedCrash(null)
@@ -397,6 +454,112 @@ export function ResultsPage() {
     )
   }
 
+  // AI Analysis animation screen
+  if (isAnalyzing && pendingCrash) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-gray-900 via-blue-900 to-gray-900 flex items-center justify-center p-8">
+        <div className="max-w-2xl w-full">
+          {/* Header */}
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center mb-12"
+          >
+            <div className="text-6xl mb-4 flex items-center justify-center">
+              <Zap className="w-14 h-14 text-yellow-300 drop-shadow-lg" />
+            </div>
+            <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
+              Análise de Dados
+            </h1>
+            <p className="text-blue-200">
+              {vehicleToUse?.model || 'Veículo'} • {formatDate(pendingCrash.received_at)}
+            </p>
+          </motion.div>
+
+          {/* Analysis Steps */}
+          <div className="space-y-4 mb-8">
+            {analysisSteps.map((step, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, x: -30 }}
+                animate={{ 
+                  opacity: analysisStep > index ? 1 : analysisStep === index ? 0.8 : 0.3,
+                  x: 0 
+                }}
+                transition={{ delay: index * 0.1, duration: 0.3 }}
+                className={`flex items-center gap-4 p-4 rounded-xl transition-all duration-300 ${
+                  analysisStep > index 
+                    ? 'bg-green-500/20 border border-green-500/30' 
+                    : analysisStep === index 
+                      ? 'bg-blue-500/20 border border-blue-500/30' 
+                      : 'bg-white/5 border border-white/10'
+                }`}
+              >
+                <div className={`text-3xl transition-transform duration-300 ${
+                  analysisStep === index ? 'animate-pulse scale-110' : ''
+                }`}>
+                  {analysisStep > index ? '✅' : step.icon}
+                </div>
+                <div className="flex-1">
+                  <h3 className={`font-semibold transition-colors ${
+                    analysisStep > index ? 'text-green-400' : analysisStep === index ? 'text-blue-300' : 'text-gray-400'
+                  }`}>
+                    {step.title}
+                  </h3>
+                  <p className={`text-sm transition-colors ${
+                    analysisStep >= index ? 'text-gray-300' : 'text-gray-500'
+                  }`}>
+                    {step.description}
+                  </p>
+                </div>
+                {analysisStep === index && (
+                  <Loader2 className="h-5 w-5 animate-spin text-blue-400" />
+                )}
+                {analysisStep > index && (
+                  <CheckCircle className="h-5 w-5 text-green-400" />
+                )}
+              </motion.div>
+            ))}
+          </div>
+
+          {/* Progress bar */}
+          <div className="w-full bg-white/10 rounded-full h-2 mb-4 overflow-hidden">
+            <div
+              className="bg-gradient-to-r from-blue-500 to-green-500 h-2 rounded-full transition-all duration-500 ease-out"
+              style={{ width: `${(analysisStep / analysisSteps.length) * 100}%` }}
+            />
+          </div>
+          <p className="text-center text-blue-200 text-sm">
+            {analysisStep < analysisSteps.length 
+              ? `Processando... ${Math.round((analysisStep / analysisSteps.length) * 100)}%`
+              : 'Análise concluída! Carregando resultados...'}
+          </p>
+
+          {/* Crash preview info */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5 }}
+            className="mt-8 p-4 bg-white/5 rounded-xl border border-white/10"
+          >
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-400">Velocidade no impacto:</span>
+              <span className="text-white font-semibold">{pendingCrash.velocity?.speed_kmh?.toFixed(0) || '?'} km/h</span>
+            </div>
+            <div className="flex items-center justify-between text-sm mt-2">
+              <span className="text-gray-400">Dano detectado:</span>
+              <span className="text-white font-semibold">{((pendingCrash.damage?.total_damage || 0) * 100).toFixed(0)}%</span>
+            </div>
+            <div className="flex items-center justify-between text-sm mt-2">
+              <span className="text-gray-400">Componentes afetados:</span>
+              <span className="text-white font-semibold">{pendingCrash.damage?.broken_parts_count || 0} peças</span>
+            </div>
+          </motion.div>
+        </div>
+      </div>
+    )
+  }
+
   // Landing page with two options
   if (showLanding) {
     return (
@@ -503,11 +666,23 @@ export function ResultsPage() {
       <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
         <div className={`py-8 ${overall_severity === 'total_loss' ? 'bg-red-600' : overall_severity === 'severe' ? 'bg-orange-600' : overall_severity === 'moderate' ? 'bg-yellow-600' : 'bg-green-600'} text-white`}>
           <div className="vw-container">
-            <button onClick={backToList} className="flex items-center gap-2 text-white/80 hover:text-white mb-4">
-              <ArrowLeft className="h-5 w-5" /> Voltar para Lista
-            </button>
-            <h1 className="text-4xl font-bold mb-2">📊 Análise de Danos</h1>
-            <p className="opacity-90">{vehicleToUse?.model || 'Veículo'} • {formatDate(selectedCrash.assessment_date)}</p>
+            <div className="flex items-center justify-between">
+              <div>
+                <button onClick={backToList} className="flex items-center gap-2 text-white/80 hover:text-white mb-4">
+                  <ArrowLeft className="h-5 w-5" /> Voltar para Lista
+                </button>
+                <h1 className="text-4xl font-bold mb-2">📊 Análise de Danos</h1>
+                <p className="opacity-90">{vehicleToUse?.model || 'Veículo'} • {formatDate(selectedCrash.assessment_date)}</p>
+              </div>
+              <div className={`px-5 py-2 rounded-full font-bold text-lg shadow-lg ${
+                overall_severity === 'total_loss' ? 'bg-white text-red-600' :
+                overall_severity === 'severe' ? 'bg-white text-orange-600' :
+                overall_severity === 'moderate' ? 'bg-white text-yellow-600' :
+                'bg-white text-green-600'
+              }`}>
+                {severityLabels[overall_severity]}
+              </div>
+            </div>
           </div>
         </div>
 
