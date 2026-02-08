@@ -1,12 +1,13 @@
 import { Link, useLocation } from 'react-router-dom'
-import { 
-  Home, 
-  Car, 
+import {
+  Home,
+  Car,
   Calendar,
   MapPin,
   Wrench,
   ClipboardList,
-  FileText
+  FileText,
+  Users
 } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
 
@@ -21,6 +22,7 @@ export function Sidebar() {
   ]
   
   const managementItems = [
+    { icon: Users, label: 'Clientes', path: '/customers' },
     { icon: Car, label: 'Veículos', path: '/vehicles' },
     { icon: MapPin, label: 'Concessionárias', path: '/dealers' },
     { icon: Wrench, label: 'Peças', path: '/parts' },

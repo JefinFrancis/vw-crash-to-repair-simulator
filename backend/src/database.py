@@ -57,7 +57,7 @@ async def initialize_db():
         # Test database connection
         async with engine.begin() as conn:
             # Import all models to ensure they are registered
-            from src.models import vehicle, damage, part, dealer, appointment  # noqa
+            from src.models import vehicle, damage, part, dealer, appointment, customer  # noqa
             
             # Create all tables
             await conn.run_sync(Base.metadata.create_all)

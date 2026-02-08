@@ -175,8 +175,8 @@ export function DealerNetworkPage() {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
           >
-            <h1 className="text-4xl font-bold mb-2">🏦 Rede de Concessionárias</h1>
-            <p className="text-vw-blue-light">
+            <h1 className="text-4xl font-bold text-white mb-2">🏦 Rede de Concessionárias</h1>
+            <p className="text-blue-200">
               Encontre a concessionária VW mais próxima para seu reparo
             </p>
           </motion.div>

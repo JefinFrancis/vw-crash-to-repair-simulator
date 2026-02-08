@@ -13,6 +13,7 @@ class VehicleBase(BaseModel):
     vin: Optional[str] = Field(None, min_length=17, max_length=17)
     beamng_model: Optional[str] = Field(None, max_length=100)
     beamng_config: Optional[str] = None
+    customer_id: Optional[uuid.UUID] = Field(None, description="Customer who owns this vehicle")
 
 
 class VehicleCreate(VehicleBase):
@@ -27,6 +28,7 @@ class VehicleUpdate(BaseModel):
     vin: Optional[str] = Field(None, min_length=17, max_length=17)
     beamng_model: Optional[str] = Field(None, max_length=100)
     beamng_config: Optional[str] = None
+    customer_id: Optional[uuid.UUID] = Field(None, description="Customer who owns this vehicle")
 
 
 class VehicleResponse(VehicleBase):

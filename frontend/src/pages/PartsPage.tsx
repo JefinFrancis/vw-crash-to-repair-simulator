@@ -84,7 +84,7 @@ export function PartsPage() {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
           >
-            <h1 className="text-3xl font-bold flex items-center gap-3">
+            <h1 className="text-3xl font-bold text-white flex items-center gap-3">
               <Package className="h-8 w-8" />
               Catálogo de Peças VW
             </h1>

@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..database import get_async_session
 from ..services import ServiceContainer, VehicleService, DealerService, PartService, DamageReportService, AppointmentService
+from ..services.customer import CustomerService
 
 
 # Database session dependency
@@ -106,14 +107,29 @@ async def get_appointment_service(
 ) -> AppointmentService:
     """
     Dependency to provide AppointmentService for API endpoints.
-    
+
     Args:
         db_session: Database session from dependency injection
-        
+
     Returns:
         AppointmentService: Appointment business logic service
     """
     return AppointmentService(db_session)
+
+
+async def get_customer_service(
+    db_session: Annotated[AsyncSession, Depends(get_db_session)]
+) -> CustomerService:
+    """
+    Dependency to provide CustomerService for API endpoints.
+
+    Args:
+        db_session: Database session from dependency injection
+
+    Returns:
+        CustomerService: Customer business logic service
+    """
+    return CustomerService(db_session)
 
 
 # Type aliases for cleaner endpoint signatures
@@ -124,3 +140,4 @@ DealerServiceDep = Annotated[DealerService, Depends(get_dealer_service)]
 PartServiceDep = Annotated[PartService, Depends(get_part_service)]
 DamageReportServiceDep = Annotated[DamageReportService, Depends(get_damage_report_service)]
 AppointmentServiceDep = Annotated[AppointmentService, Depends(get_appointment_service)]
+CustomerServiceDep = Annotated[CustomerService, Depends(get_customer_service)]

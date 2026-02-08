@@ -7,6 +7,7 @@ import { DealerNetworkPage } from './pages/DealerNetworkPage'
 import { VehicleManagementPage } from './pages/VehicleManagementPage'
 import { PartsPage } from './pages/PartsPage'
 import { DamageReportsPage } from './pages/DamageReportsPage'
+import { CustomerManagementPage } from './pages/CustomerManagementPage'
 
 export function AppRouter() {
   return (
@@ -18,6 +19,7 @@ export function AppRouter() {
         <Route path="/appointment" element={<AppointmentPage />} />
         {/* Management Routes */}
         <Route path="/vehicles" element={<VehicleManagementPage />} />
+        <Route path="/customers" element={<CustomerManagementPage />} />
         <Route path="/parts" element={<PartsPage />} />
         <Route path="/reports" element={<DamageReportsPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />

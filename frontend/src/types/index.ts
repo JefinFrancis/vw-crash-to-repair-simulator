@@ -27,6 +27,28 @@ export interface VehicleCreate {
   beamng_config?: string;
 }
 
+// Customer Types
+export interface Customer {
+  id: string;
+  name: string;
+  phone: string;  // Brazilian mobile format: 5511999999999
+  preferred_dealer_cnpj?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CustomerCreate {
+  name: string;
+  phone: string;
+  preferred_dealer_cnpj?: string;
+}
+
+export interface CustomerUpdate {
+  name?: string;
+  phone?: string;
+  preferred_dealer_cnpj?: string;
+}
+
 // Dealer Types
 export interface Dealer {
   id: string;

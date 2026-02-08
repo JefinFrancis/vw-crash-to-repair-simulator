@@ -170,11 +170,11 @@ export function DamageReportsPage() {
               <ArrowLeft className="h-4 w-4" />
               Voltar para lista
             </button>
-            <h1 className="text-2xl font-bold flex items-center gap-3">
+            <h1 className="text-2xl font-bold text-white flex items-center gap-3">
               <FileText className="h-7 w-7" />
               Detalhes do Sinistro
             </h1>
-            <p className="text-white/80 mt-1">
+            <p className="text-blue-200 mt-1">
               ID: {selectedCrash.crash_id}
             </p>
           </div>
@@ -301,7 +301,7 @@ export function DamageReportsPage() {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
           >
-            <h1 className="text-3xl font-bold flex items-center gap-3">
+            <h1 className="text-3xl font-bold text-white flex items-center gap-3">
               <FileText className="h-8 w-8" />
               Relatórios de Sinistros
             </h1>

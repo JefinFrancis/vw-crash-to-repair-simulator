@@ -11,7 +11,7 @@ import uvicorn
 
 from src.config import settings
 from src.database import initialize_db, close_db
-from src.api.v1 import health, vehicles, damage, dealers, parts, appointments, beamng, estimates
+from src.api.v1 import health, vehicles, damage, dealers, parts, appointments, beamng, estimates, customers
 from src.utils.logging import configure_logging
 
 
@@ -161,6 +161,7 @@ app.include_router(damage.router, prefix="/api/v1/damage", tags=["Damage Assessm
 app.include_router(dealers.router, prefix="/api/v1/dealers", tags=["VW Dealers"])
 app.include_router(parts.router, prefix="/api/v1/parts", tags=["VW Parts"])
 app.include_router(appointments.router, prefix="/api/v1/appointments", tags=["Appointments"])
+app.include_router(customers.router, prefix="/api/v1/customers", tags=["Customers"])
 app.include_router(estimates.router, prefix="/api/v1/estimates", tags=["Repair Estimates"])
 
 

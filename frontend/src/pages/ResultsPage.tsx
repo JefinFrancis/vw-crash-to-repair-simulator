@@ -671,8 +671,8 @@ export function ResultsPage() {
                 <button onClick={backToList} className="flex items-center gap-2 text-white/80 hover:text-white mb-4">
                   <ArrowLeft className="h-5 w-5" /> Voltar para Lista
                 </button>
-                <h1 className="text-4xl font-bold mb-2">📊 Análise de Danos</h1>
-                <p className="opacity-90">{vehicleToUse?.model || 'Veículo'} • {formatDate(selectedCrash.assessment_date)}</p>
+                <h1 className="text-4xl font-bold text-white mb-2">📊 Análise de Danos</h1>
+                <p className="text-blue-200">{vehicleToUse?.model || 'Veículo'} • {formatDate(selectedCrash.assessment_date)}</p>
               </div>
               <div className={`px-5 py-2 rounded-full font-bold text-lg shadow-lg ${
                 overall_severity === 'total_loss' ? 'bg-white text-red-600' :
@@ -930,11 +930,11 @@ export function ResultsPage() {
         <div className="vw-container">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold mb-2 flex items-center gap-3">
+              <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-3">
                 <Car className="h-8 w-8" />
                 Sinistros do Veículo
               </h1>
-              <p className="opacity-90">
+              <p className="text-blue-200">
                 {vehicleToUse?.model || 'Veículo'} • {crashes.length} {crashes.length === 1 ? 'colisão registrada' : 'colisões registradas'}
               </p>
             </div>
