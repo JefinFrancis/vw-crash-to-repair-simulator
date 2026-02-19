@@ -424,7 +424,10 @@ async def receive_crash_event(
                     "bottom": event.damage.damage_by_zone.bottom
                 },
                 "broken_parts": event.damage.broken_parts,
-                "broken_parts_count": event.damage.broken_parts_count
+                "broken_parts_count": event.damage.broken_parts_count,
+                "damaged_parts_count": event.damage.damaged_parts_count,
+                "total_parts_count": event.damage.total_parts_count,
+                "parts": [{"name": p.name, "partId": p.partId, "damage": p.damage} for p in event.damage.parts]
             },
             "metadata": {
                 "mod_version": event.metadata.mod_version,
@@ -438,16 +441,16 @@ async def receive_crash_event(
         if len(_crash_events) > MAX_CRASH_HISTORY:
             _crash_events = _crash_events[:MAX_CRASH_HISTORY]
         
-        # Determine damage severity
+        # Determine damage severity (aligned with frontend thresholds)
         total_damage = event.damage.total_damage
-        if total_damage >= 0.7:
+        if total_damage >= 0.8:
+            severity = "total_loss"
+        elif total_damage >= 0.5:
             severity = "severe"
-        elif total_damage >= 0.4:
-            severity = "moderate"
         elif total_damage >= 0.2:
-            severity = "minor"
+            severity = "moderate"
         else:
-            severity = "minimal"
+            severity = "minor"
         
         logger.info(
             f"✅ Crash event processed: {crash_id}",
@@ -495,14 +498,19 @@ async def get_latest_crash() -> LatestCrashResponse:
     
     latest = _crash_events[0]
     
+    damage_data = latest["damage"]
     return LatestCrashResponse(
         has_crash=True,
         crash_id=latest["crash_id"],
         crash_time=datetime.fromisoformat(latest["received_at"]),
         vehicle_model=latest["vehicle"]["model"],
-        total_damage=latest["damage"]["total_damage"],
-        damage_by_zone=latest["damage"]["damage_by_zone"],
-        broken_parts_count=latest["damage"]["broken_parts_count"],
+        total_damage=damage_data.get("total_damage"),
+        damaged_parts_count=damage_data.get("damaged_parts_count"),
+        broken_parts_count=damage_data.get("broken_parts_count"),
+        damaged_parts=damage_data.get("parts", []),
+        broken_parts=damage_data.get("broken_parts", []),
+        part_damage=damage_data.get("part_damage", {}),
+        damage_by_zone=damage_data.get("damage_by_zone"),
         speed_at_impact=latest["velocity"]["speed_kmh"],
         estimate_ready=True
     )

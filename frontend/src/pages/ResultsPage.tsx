@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useQuery } from '@tanstack/react-query'
 import {
   AlertTriangle,
+
   Car,
   DollarSign,
   Gauge,
@@ -21,9 +22,8 @@ import {
 import toast from 'react-hot-toast'
 import { useAppStore } from '../store/useAppStore'
 import { beamngService, CrashEventSubmission } from '../services/beamngService'
-import { vehicleService } from '../services/vehicleService'
 import { partService } from '../services/partService'
-import { Vehicle, Part } from '../types'
+import { Part } from '../types'
 
 // Labor rate per hour (R$/h)
 const LABOR_RATE_BRL = 150
@@ -102,18 +102,86 @@ function findMatchingPart(beamngName: string, allParts: Part[]): Part | undefine
   return bestScore >= 2 ? bestMatch : undefined
 }
 
-function calculateCrashCost(brokenParts: string[], allParts: Part[]) {
+function calculateCrashCost(crash: CrashItem['damage'], allParts: Part[]) {
+  // Use full parts array when available, fall back to broken_parts
+  const partsList: Array<{ name: string; damage: number }> = crash.parts?.length
+    ? crash.parts.map(p => ({ name: p.name, damage: p.damage }))
+    : (crash.broken_parts || []).map(name => ({
+        name,
+        damage: crash.part_damage?.[name] ?? 1,
+      }))
+
   let partsCost = 0
   let totalLaborHours = 0
-  for (const name of brokenParts) {
+  for (const { name, damage } of partsList) {
     const dbPart = findMatchingPart(name, allParts)
     if (dbPart) {
-      partsCost += parseFloat(dbPart.price_brl) || 0
+      const price = parseFloat(dbPart.price_brl) || 0
+      // >= 50% damage: full replacement | 20-49%: 50% repair | < 20%: 25% repair
+      const factor = damage >= 0.5 ? 1 : damage >= 0.2 ? 0.5 : 0.25
+      partsCost += price * factor
       totalLaborHours += parseFloat(dbPart.labor_hours || '0') || 0
     }
   }
   const laborCost = totalLaborHours * LABOR_RATE_BRL
   return { partsCost, laborCost, total: partsCost + laborCost }
+}
+
+// Parts affected per crash scenario (using exact English names from DB for matching)
+const SCENARIO_PARTS: Record<string, { primary: string[]; secondary: string[] }> = {
+  frontal: {
+    primary: ['Front Bumper', 'T-Cross Hood', 'Radiator', 'Halogen Left Headlight', 'Halogen Right Headlight'],
+    secondary: ['Front Left Fender', 'Front Right Fender', 'Windshield', 'Left DRL only', 'Right DRL only', 'Front Struts', 'Independent Front Suspension', 'Stock Turbocharger', 'Stock Engine Mounts'],
+  },
+  side: {
+    primary: ['Front Left Door', 'Front Left Door Glass', 'Left Mirror', 'Front Left Fender'],
+    secondary: ['Rear Left Door', 'Rear Left Door Glass', 'Left DRL only', 'Halogen Left Headlight', 'Left Taillight', 'Front Sway Bar', 'Driver Seat'],
+  },
+  rear: {
+    primary: ['T-Cross Rear Bumper', 'Tailgate', 'Tailgate Glass', 'Left Taillight', 'Right Taillight'],
+    secondary: ['Rear Shocks', 'Rear Springs', 'Gasoline Fuel Tank', 'Parcel Shelf', 'Torsion Beam Rear Suspension', 'Rear Seats'],
+  },
+  rollover: {
+    primary: ['Windshield', 'T-Cross Hood', 'Left Mirror', 'Right Mirror'],
+    secondary: ['Front Left Door Glass', 'Front Right Door Glass', 'Rear Left Door Glass', 'Rear Right Door Glass', 'Tailgate Glass', 'Interior', 'Front Left Fender', 'Front Right Fender'],
+  },
+}
+
+function generateSimulationParts(scenarioId: string, speed: number) {
+  const pool = SCENARIO_PARTS[scenarioId] || SCENARIO_PARTS.frontal
+  const speedFactor = Math.min(speed / 100, 1)
+
+  // Always include primary parts
+  const parts = [...pool.primary]
+
+  // Add secondary parts based on speed (higher speed = more parts)
+  const secondaryCount = Math.max(1, Math.floor(pool.secondary.length * speedFactor))
+  const shuffled = [...pool.secondary].sort(() => Math.random() - 0.5)
+  parts.push(...shuffled.slice(0, secondaryCount))
+
+  // Generate damage levels per part (higher speed = more damage)
+  const partDamage: Record<string, number> = {}
+  const partsArray: Array<{ name: string; partId: string; damage: number }> = []
+
+  for (const name of parts) {
+    const baseDamage = 0.3 + speedFactor * 0.5
+    const variation = (Math.random() - 0.5) * 0.3
+    const damage = parseFloat(Math.min(Math.max(baseDamage + variation, 0.1), 1.0).toFixed(2))
+    const partId = name.toLowerCase().replace(/[\s-]+/g, '_')
+    // Key part_damage by both name and partId so AnalysisPage can look up by broken_parts name
+    partDamage[name] = damage
+    partDamage[partId] = damage
+    partsArray.push({ name, partId, damage })
+  }
+
+  return {
+    broken_parts: parts,
+    part_damage: partDamage,
+    parts: partsArray,
+    broken_parts_count: parts.length,
+    damaged_parts_count: parts.length + Math.floor(Math.random() * 3),
+    total_parts_count: 51,
+  }
 }
 
 // Crash item interface
@@ -126,15 +194,16 @@ interface CrashItem {
     total_damage: number
     broken_parts_count: number
     broken_parts: string[]
+    parts?: Array<{ name: string; partId: string; damage: number }>
     part_damage?: Record<string, number>
   }
 }
 
 // Crash scenarios for simulation modal
 const CRASH_SCENARIOS = [
-  { id: 'frontal', name: 'Colisao Frontal', icon: Target, speed: 50, angle: 0 },
-  { id: 'side', name: 'Colisao Lateral', icon: Target, speed: 40, angle: 90 },
-  { id: 'rear', name: 'Colisao Traseira', icon: Target, speed: 30, angle: 180 },
+  { id: 'frontal', name: 'Colisão Frontal', icon: Target, speed: 50, angle: 0 },
+  { id: 'side', name: 'Colisão Lateral', icon: Target, speed: 40, angle: 90 },
+  { id: 'rear', name: 'Colisão Traseira', icon: Target, speed: 30, angle: 180 },
   { id: 'rollover', name: 'Capotamento', icon: Target, speed: 60, angle: 45 },
 ]
 
@@ -142,11 +211,25 @@ export function ResultsPage() {
   const navigate = useNavigate()
   const { selectedVehicle, setSelectedVehicle, setCurrentScreen } = useAppStore()
 
+  // Redirect to /home if no vehicle selected
+  useEffect(() => {
+    if (!selectedVehicle) {
+      navigate('/home', { replace: true })
+    }
+  }, [selectedVehicle, navigate])
+
   const handleChangeVehicle = () => {
+    sessionStorage.removeItem('vw_results_mode')
     setSelectedVehicle(undefined)
     setCurrentScreen('landing')
     navigate('/home')
   }
+
+  // null = mode selection screen, 'beamng' | 'simulation' = collision list
+  const [mode, setMode] = useState<'beamng' | 'simulation' | null>(() => {
+    const stored = sessionStorage.getItem('vw_results_mode')
+    return stored === 'beamng' || stored === 'simulation' ? stored : null
+  })
 
   const [search, setSearch] = useState('')
   const [crashes, setCrashes] = useState<CrashItem[]>([])
@@ -155,7 +238,6 @@ export function ResultsPage() {
   const [showSimModal, setShowSimModal] = useState(false)
 
   // Simulation modal state
-  const [simVehicle, setSimVehicle] = useState<Vehicle | undefined>(selectedVehicle)
   const [simScenario, setSimScenario] = useState(CRASH_SCENARIOS[0])
   const [simSpeed, setSimSpeed] = useState(50)
   const [isSimulating, setIsSimulating] = useState(false)
@@ -168,28 +250,26 @@ export function ResultsPage() {
     staleTime: 5 * 60 * 1000,
   })
 
-  // Fetch vehicles for simulation modal
-  const { data: vehicles = [] } = useQuery({
-    queryKey: ['vehicles'],
-    queryFn: () => vehicleService.list({ per_page: 50 }),
-  })
-
   // Fetch crashes
-  useEffect(() => { fetchCrashes() }, [])
-
-  const fetchCrashes = async () => {
+  const fetchCrashes = async (silent = false) => {
     try {
-      setIsLoading(true)
-      setError(null)
+      if (!silent) { setIsLoading(true); setError(null) }
       const history = await beamngService.getCrashHistory(50, 0)
       setCrashes(history.crashes?.length > 0 ? history.crashes : [])
     } catch (err) {
       console.error('Failed to fetch crashes:', err)
-      setError('Erro ao buscar sinistros.')
+      if (!silent) setError('Erro ao buscar sinistros.')
     } finally {
-      setIsLoading(false)
+      if (!silent) setIsLoading(false)
     }
   }
+
+  // Initial fetch + poll every 5s for new BeamNG crashes
+  useEffect(() => {
+    fetchCrashes()
+    const interval = setInterval(() => fetchCrashes(true), 5000)
+    return () => clearInterval(interval)
+  }, [])
 
   const refreshCrashes = async () => {
     await fetchCrashes()
@@ -203,14 +283,25 @@ export function ResultsPage() {
     c.crash_id?.toLowerCase().includes(search.toLowerCase())
   )
 
+  const handleSelectBeamNG = () => {
+    sessionStorage.setItem('vw_results_mode', 'beamng')
+    setMode('beamng')
+  }
+
+  const handleSelectSimulation = () => {
+    sessionStorage.setItem('vw_results_mode', 'simulation')
+    setMode('simulation')
+    setShowSimModal(true)
+  }
+
   // Stats
   const totalCrashes = crashes.length
   const severeCount = crashes.filter(c => getSeverityFromDamage(c.damage.total_damage) === 'severe' || getSeverityFromDamage(c.damage.total_damage) === 'total_loss').length
 
   // Run demo simulation
   const runSimulation = async () => {
-    if (!simVehicle) {
-      toast.error('Selecione um veiculo primeiro')
+    if (!selectedVehicle) {
+      toast.error('Selecione um veículo primeiro')
       return
     }
 
@@ -222,16 +313,18 @@ export function ResultsPage() {
       setSimProgress(i)
     }
 
+    const simParts = generateSimulationParts(simScenario.id, simSpeed)
+
     const crashEvent: CrashEventSubmission = {
       event_type: 'simulation',
-      timestamp: Date.now() / 1000,
+      timestamp: Math.floor(Date.now() / 1000),
       timestamp_iso: new Date().toISOString(),
       vehicle: {
-        id: simVehicle.id,
-        name: `VW ${simVehicle.model}`,
-        model: simVehicle.model,
-        brand: simVehicle.make || 'Volkswagen',
-        year: simVehicle.year,
+        id: selectedVehicle.id,
+        name: `VW ${selectedVehicle.model}`,
+        model: selectedVehicle.model,
+        brand: selectedVehicle.make || 'Volkswagen',
+        year: selectedVehicle.year,
       },
       position: { x: 0, y: 0, z: 0 },
       velocity: {
@@ -244,28 +337,18 @@ export function ResultsPage() {
         total_damage: Math.min(simSpeed / 120, 0.95),
         previous_damage: 0,
         damage_delta: Math.min(simSpeed / 120, 0.95),
-        part_damage: {
-          front_bumper: Math.random() * 0.8 + 0.2,
-          hood: Math.random() * 0.6,
-          left_headlight: Math.random() * 0.7,
-          left_fender: Math.random() * 0.5,
-        },
+        part_damage: simParts.part_damage,
         damage_by_zone: {
           front: simScenario.angle === 0 ? 0.8 : 0.2,
           rear: simScenario.angle === 180 ? 0.8 : 0.1,
           left: simScenario.angle === 90 ? 0.7 : 0.15,
           right: 0.1, top: simScenario.id === 'rollover' ? 0.6 : 0.05, bottom: 0.1,
         },
-        broken_parts: ['front_bumper', 'hood', 'left_headlight', 'left_fender'],
-        broken_parts_count: 4,
-        damaged_parts_count: 6,
-        total_parts_count: 51,
-        parts: [
-          { name: 'front_bumper', partId: 'fb1', damage: 0.8 },
-          { name: 'hood', partId: 'h1', damage: 0.5 },
-          { name: 'left_headlight', partId: 'lh1', damage: 0.9 },
-          { name: 'left_fender', partId: 'lf1', damage: 0.4 },
-        ],
+        broken_parts: simParts.broken_parts,
+        broken_parts_count: simParts.broken_parts_count,
+        damaged_parts_count: simParts.damaged_parts_count,
+        total_parts_count: simParts.total_parts_count,
+        parts: simParts.parts,
       },
       metadata: {
         mod_version: '1.0.0-sim',
@@ -276,14 +359,14 @@ export function ResultsPage() {
 
     try {
       await beamngService.submitCrashEvent(crashEvent)
-      toast.success('Simulacao concluida!')
+      toast.success('Simulação concluída!')
       setIsSimulating(false)
       setShowSimModal(false)
       setSimProgress(0)
       await fetchCrashes()
     } catch (err) {
       console.error('Simulation error:', err)
-      toast.error('Erro na simulacao')
+      toast.error('Erro na simulação')
       setIsSimulating(false)
       setSimProgress(0)
     }
@@ -304,181 +387,222 @@ export function ResultsPage() {
             </h1>
             <p className="text-blue-200 mt-2">
               {selectedVehicle
-                ? <>VW {selectedVehicle.model} ({selectedVehicle.year}) &middot; <button onClick={handleChangeVehicle} className="underline hover:text-white transition-colors">Trocar veiculo</button></>
-                : 'Colisoes registradas pelo BeamNG e simulacoes'}
+                ? <>VW {selectedVehicle.model} ({selectedVehicle.year}) &middot; <button onClick={handleChangeVehicle} className="underline hover:text-white transition-colors">Trocar veículo</button></>
+                : 'Colisões registradas pelo BeamNG e simulações'}
             </p>
           </motion.div>
         </div>
       </div>
 
       <div className="vw-container py-8">
-        {/* Action Cards: BeamNG or Simulate */}
-        <motion.div
-          className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <div className="bg-gradient-to-br from-blue-600 to-blue-800 rounded-xl p-6 text-white">
-            <div className="flex items-center gap-2 mb-2">
-              <Gamepad2 className="h-6 w-6" />
-              <h3 className="text-lg font-bold">Dirigir no BeamNG</h3>
-            </div>
-            <p className="text-blue-200 text-sm mb-4">
-              Conecte-se ao BeamNG.drive e dirija o veiculo. Colisoes sao detectadas automaticamente pelo mod.
-            </p>
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 text-xs bg-white/15 rounded-lg px-3 py-1.5">
-                <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
-                Aguardando dados do BeamNG
-              </div>
-              <button onClick={refreshCrashes} className="text-xs bg-white/20 hover:bg-white/30 rounded-lg px-3 py-1.5 transition-colors">
-                Atualizar lista
-              </button>
-            </div>
-          </div>
-
-          <div
-            className="bg-gradient-to-br from-orange-500 to-orange-700 rounded-xl p-6 text-white cursor-pointer hover:shadow-lg transition-all"
-            onClick={() => { setSimVehicle(selectedVehicle); setShowSimModal(true) }}
+        {/* MODE SELECTION */}
+        {!mode && (
+          <motion.div
+            className="flex flex-col items-center justify-center py-12"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
           >
-            <div className="flex items-center gap-2 mb-2">
-              <Zap className="h-6 w-6" />
-              <h3 className="text-lg font-bold">Simular Colisao</h3>
-            </div>
-            <p className="text-orange-100 text-sm mb-4">
-              Crie uma simulacao de colisao escolhendo o cenario e velocidade de impacto.
-            </p>
-            <button className="flex items-center gap-2 bg-white/20 hover:bg-white/30 rounded-lg px-4 py-2 text-sm font-medium transition-colors">
-              <Play className="h-4 w-4" />
-              Nova Simulacao
-            </button>
-          </div>
-        </motion.div>
+            <p className="text-gray-500 mb-8 text-lg">Como deseja registrar colisões?</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-3xl">
+              {/* BeamNG Card */}
+              <motion.div
+                className="bg-gradient-to-br from-blue-600 to-blue-800 rounded-2xl p-8 text-white cursor-pointer hover:shadow-xl transition-all"
+                onClick={handleSelectBeamNG}
+                whileHover={{ y: -4, scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <div className="flex flex-col items-center text-center">
+                  <div className="w-16 h-16 bg-white/15 rounded-2xl flex items-center justify-center mb-4">
+                    <Gamepad2 className="h-8 w-8" />
+                  </div>
+                  <h3 className="text-xl font-bold mb-2">Dirigir no BeamNG</h3>
+                  <p className="text-blue-200 text-sm leading-relaxed">
+                    Conecte-se ao BeamNG.drive e dirija o veículo. Colisões são detectadas automaticamente pelo mod.
+                  </p>
+                  <div className="flex items-center gap-2 text-xs bg-white/15 rounded-lg px-3 py-1.5 mt-4">
+                    <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
+                    Aguardando dados do BeamNG
+                  </div>
+                </div>
+              </motion.div>
 
-        {/* Stats Cards */}
-        <motion.div
-          className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-        >
-          <div className="bg-white rounded-xl p-4 shadow-sm border">
-            <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
-              <Car className="h-4 w-4" /> Total de Sinistros
+              {/* Simulation Card */}
+              <motion.div
+                className="bg-gradient-to-br from-orange-500 to-orange-700 rounded-2xl p-8 text-white cursor-pointer hover:shadow-xl transition-all"
+                onClick={handleSelectSimulation}
+                whileHover={{ y: -4, scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <div className="flex flex-col items-center text-center">
+                  <div className="w-16 h-16 bg-white/15 rounded-2xl flex items-center justify-center mb-4">
+                    <Zap className="h-8 w-8" />
+                  </div>
+                  <h3 className="text-xl font-bold mb-2">Simular Colisão</h3>
+                  <p className="text-orange-100 text-sm leading-relaxed">
+                    Crie uma simulação de colisão escolhendo o cenário e velocidade de impacto.
+                  </p>
+                  <div className="flex items-center gap-2 bg-white/20 rounded-lg px-4 py-2 text-sm font-medium mt-4">
+                    <Play className="h-4 w-4" />
+                    Nova Simulação
+                  </div>
+                </div>
+              </motion.div>
             </div>
-            <p className="text-2xl font-bold text-gray-900">{totalCrashes}</p>
-          </div>
-          <div className="bg-white rounded-xl p-4 shadow-sm border">
-            <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
-              <AlertTriangle className="h-4 w-4" /> Severos
-            </div>
-            <p className="text-2xl font-bold text-orange-600">{severeCount}</p>
-          </div>
-          <div className="bg-white rounded-xl p-4 shadow-sm border">
-            <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
-              <DollarSign className="h-4 w-4" /> Custo Medio
-            </div>
-            <p className="text-2xl font-bold text-vw-blue">
-              {crashes.length > 0
-                ? formatBRL(crashes.reduce((sum, c) => sum + calculateCrashCost(c.damage.broken_parts || [], allParts).total, 0) / crashes.length)
-                : 'R$ 0,00'}
-            </p>
-          </div>
-        </motion.div>
+          </motion.div>
+        )}
 
-        {/* Search + Refresh */}
-        <motion.div
-          className="flex items-center gap-3 mb-6"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-        >
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Buscar por veiculo, marca ou ID..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-vw-blue focus:border-transparent"
-            />
-          </div>
-          <button onClick={refreshCrashes} className="p-3 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl transition-colors" title="Atualizar">
-            <RefreshCw className="h-5 w-5 text-gray-500" />
-          </button>
-        </motion.div>
-
-        {/* Crash List */}
-        <motion.div
-          className="bg-white rounded-xl shadow-sm border overflow-hidden"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          {/* Table Header */}
-          <div className="grid grid-cols-12 gap-4 px-6 py-3 bg-gray-50 border-b text-sm font-medium text-gray-500">
-            <div className="col-span-3">Veiculo</div>
-            <div className="col-span-2">Severidade</div>
-            <div className="col-span-2">Data</div>
-            <div className="col-span-1">Pecas</div>
-            <div className="col-span-2">Valor Manutencao</div>
-            <div className="col-span-2 text-right">Acoes</div>
-          </div>
-
-          {isLoading ? (
-            <div className="flex items-center justify-center py-16">
-              <Loader2 className="h-8 w-8 text-vw-blue animate-spin" />
-            </div>
-          ) : error ? (
-            <div className="text-center py-16">
-              <AlertTriangle className="h-10 w-10 text-red-400 mx-auto mb-3" />
-              <p className="text-gray-500">{error}</p>
-              <button onClick={refreshCrashes} className="mt-3 text-vw-blue hover:underline text-sm">Tentar novamente</button>
-            </div>
-          ) : filtered.length === 0 ? (
-            <div className="text-center py-16">
-              <Car className="h-10 w-10 text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-500">Nenhum sinistro encontrado</p>
-              <p className="text-gray-400 text-sm mt-1">Dirija no BeamNG ou crie uma simulacao para gerar colisoes</p>
-            </div>
-          ) : (
-            filtered.map((crash) => {
-              const severity = getSeverityFromDamage(crash.damage.total_damage)
-              const cost = calculateCrashCost(crash.damage.broken_parts || [], allParts)
-              return (
-                <motion.div
-                  key={crash.crash_id}
-                  className="grid grid-cols-12 gap-4 px-6 py-4 border-b hover:bg-gray-50 transition-colors items-center cursor-pointer"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  onClick={() => navigate('/damage-reports', { state: { crashId: crash.crash_id } })}
+        {/* COLLISION LIST (after mode selection) */}
+        {mode && (
+          <>
+            {/* Back + action bar */}
+            <motion.div
+              className="flex items-center justify-end mb-6"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <div className="flex items-center gap-3">
+                {mode === 'beamng' && (
+                  <div className="flex items-center gap-2 text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded-lg px-3 py-1.5">
+                    <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
+                    BeamNG Ativo
+                  </div>
+                )}
+                <button
+                  onClick={() => setShowSimModal(true)}
+                  className="vw-button-primary flex items-center gap-2 text-sm"
                 >
-                  <div className="col-span-3">
-                    <p className="font-medium text-gray-900">{crash.vehicle?.name || 'Veiculo'}</p>
-                    <p className="text-xs text-gray-500">{crash.velocity?.speed_kmh?.toFixed(0) || '0'} km/h</p>
-                  </div>
-                  <div className="col-span-2">
-                    <span className={`px-2 py-1 text-xs rounded-full font-medium ${severityColors[severity]}`}>
-                      {severityLabels[severity]}
-                    </span>
-                  </div>
-                  <div className="col-span-2 text-sm text-gray-600">
-                    {formatDate(crash.received_at)}
-                  </div>
-                  <div className="col-span-1 text-sm text-gray-600">
-                    {crash.damage.broken_parts_count || 0}
-                  </div>
-                  <div className="col-span-2 font-semibold text-vw-blue">
-                    {formatBRL(cost.total)}
-                  </div>
-                  <div className="col-span-2 flex justify-end">
-                    <ChevronRight className="h-5 w-5 text-gray-400" />
-                  </div>
-                </motion.div>
-              )
-            })
-          )}
-        </motion.div>
+                  <Zap className="h-4 w-4" />
+                  Nova Simulação
+                </button>
+              </div>
+            </motion.div>
+
+            {/* Stats Cards */}
+            <motion.div
+              className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+            >
+              <div className="bg-white rounded-xl p-4 shadow-sm border">
+                <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
+                  <Car className="h-4 w-4" /> Total de Sinistros
+                </div>
+                <p className="text-2xl font-bold text-gray-900">{totalCrashes}</p>
+              </div>
+              <div className="bg-white rounded-xl p-4 shadow-sm border">
+                <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
+                  <AlertTriangle className="h-4 w-4" /> Severos
+                </div>
+                <p className="text-2xl font-bold text-orange-600">{severeCount}</p>
+              </div>
+              <div className="bg-white rounded-xl p-4 shadow-sm border">
+                <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
+                  <DollarSign className="h-4 w-4" /> Custo Médio
+                </div>
+                <p className="text-2xl font-bold text-vw-blue">
+                  {crashes.length > 0
+                    ? formatBRL(crashes.reduce((sum, c) => sum + calculateCrashCost(c.damage, allParts).total, 0) / crashes.length)
+                    : 'R$ 0,00'}
+                </p>
+              </div>
+            </motion.div>
+
+            {/* Search + Refresh */}
+            <motion.div
+              className="flex items-center gap-3 mb-6"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15 }}
+            >
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Buscar por veículo, marca ou ID..."
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-vw-blue focus:border-transparent"
+                />
+              </div>
+              <button onClick={refreshCrashes} className="p-3 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl transition-colors" title="Atualizar">
+                <RefreshCw className="h-5 w-5 text-gray-500" />
+              </button>
+            </motion.div>
+
+            {/* Crash List */}
+            <motion.div
+              className="bg-white rounded-xl shadow-sm border overflow-hidden"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+            >
+              {/* Table Header */}
+              <div className="grid grid-cols-12 gap-4 px-6 py-3 bg-gray-50 border-b text-sm font-medium text-gray-500">
+                <div className="col-span-3">Veículo</div>
+                <div className="col-span-2">Severidade</div>
+                <div className="col-span-2">Data</div>
+                <div className="col-span-1">Peças</div>
+                <div className="col-span-2">Valor Manutenção</div>
+                <div className="col-span-2 text-right">Ações</div>
+              </div>
+
+              {isLoading ? (
+                <div className="flex items-center justify-center py-16">
+                  <Loader2 className="h-8 w-8 text-vw-blue animate-spin" />
+                </div>
+              ) : error ? (
+                <div className="text-center py-16">
+                  <AlertTriangle className="h-10 w-10 text-red-400 mx-auto mb-3" />
+                  <p className="text-gray-500">{error}</p>
+                  <button onClick={refreshCrashes} className="mt-3 text-vw-blue hover:underline text-sm">Tentar novamente</button>
+                </div>
+              ) : filtered.length === 0 ? (
+                <div className="text-center py-16">
+                  <Car className="h-10 w-10 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-500">Nenhum sinistro encontrado</p>
+                  <p className="text-gray-400 text-sm mt-1">Dirija no BeamNG ou crie uma simulação para gerar colisões</p>
+                </div>
+              ) : (
+                filtered.map((crash) => {
+                  const severity = getSeverityFromDamage(crash.damage.total_damage)
+                  const cost = calculateCrashCost(crash.damage, allParts)
+                  return (
+                    <motion.div
+                      key={crash.crash_id}
+                      className="grid grid-cols-12 gap-4 px-6 py-4 border-b hover:bg-gray-50 transition-colors items-center cursor-pointer"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      onClick={() => navigate('/analysis', { state: { crash } })}
+                    >
+                      <div className="col-span-3">
+                        <p className="font-medium text-gray-900">{crash.vehicle?.name || 'Veículo'}</p>
+                        <p className="text-xs text-gray-500">{crash.velocity?.speed_kmh?.toFixed(0) || '0'} km/h</p>
+                      </div>
+                      <div className="col-span-2">
+                        <span className={`px-2 py-1 text-xs rounded-full font-medium ${severityColors[severity]}`}>
+                          {severityLabels[severity]}
+                        </span>
+                      </div>
+                      <div className="col-span-2 text-sm text-gray-600">
+                        {formatDate(crash.received_at)}
+                      </div>
+                      <div className="col-span-1 text-sm text-gray-600">
+                        {crash.damage.broken_parts_count || 0}
+                      </div>
+                      <div className="col-span-2 font-semibold text-vw-blue">
+                        {formatBRL(cost.total)}
+                      </div>
+                      <div className="col-span-2 flex justify-end">
+                        <ChevronRight className="h-5 w-5 text-gray-400" />
+                      </div>
+                    </motion.div>
+                  )
+                })
+              )}
+            </motion.div>
+          </>
+        )}
       </div>
 
       {/* Simulation Modal */}
@@ -495,7 +619,7 @@ export function ResultsPage() {
               <div className="flex items-center justify-between p-6 border-b">
                 <h2 className="text-xl font-bold text-vw-blue flex items-center gap-2">
                   <Zap className="h-5 w-5" />
-                  Nova Simulacao de Colisao
+                  Nova Simulação de Colisão
                 </h2>
                 <button onClick={() => setShowSimModal(false)} className="p-2 hover:bg-gray-100 rounded-lg">
                   <X className="h-5 w-5" />
@@ -506,32 +630,18 @@ export function ResultsPage() {
                 {/* Vehicle Selection */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    <Car className="h-4 w-4 inline mr-1" /> Veiculo
+                    <Car className="h-4 w-4 inline mr-1" /> Veículo
                   </label>
-                  {(Array.isArray(vehicles) ? vehicles : []).length === 0 ? (
-                    <p className="text-gray-500 text-sm">Nenhum veiculo cadastrado. <button onClick={() => navigate('/vehicles')} className="text-vw-blue hover:underline">Cadastrar</button></p>
-                  ) : (
-                    <div className="grid grid-cols-2 gap-3">
-                      {(Array.isArray(vehicles) ? vehicles : []).map((v: Vehicle) => (
-                        <button
-                          key={v.id}
-                          onClick={() => setSimVehicle(v)}
-                          className={`p-3 border-2 rounded-lg text-left transition-all ${
-                            simVehicle?.id === v.id ? 'border-vw-blue bg-blue-50' : 'border-gray-200 hover:border-gray-300'
-                          }`}
-                        >
-                          <p className="font-medium text-sm">VW {v.model}</p>
-                          <p className="text-xs text-gray-500">{v.year} - {v.vin?.slice(-6)}</p>
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                  <div className="p-3 border-2 border-vw-blue bg-blue-50 rounded-lg">
+                    <p className="font-medium text-sm">VW {selectedVehicle?.model}</p>
+                    <p className="text-xs text-gray-500">{selectedVehicle?.year} - {selectedVehicle?.vin?.slice(-6)}</p>
+                  </div>
                 </div>
 
                 {/* Crash Scenario */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    <Target className="h-4 w-4 inline mr-1" /> Tipo de Colisao
+                    <Target className="h-4 w-4 inline mr-1" /> Tipo de Colisão
                   </label>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     {CRASH_SCENARIOS.map(s => (
@@ -581,7 +691,7 @@ export function ResultsPage() {
                       />
                     </div>
                     <p className="text-center text-sm text-gray-500">
-                      {simProgress < 50 ? 'Executando simulacao...' : simProgress < 90 ? 'Analisando danos...' : 'Gerando relatorio...'}
+                      {simProgress < 50 ? 'Executando simulação...' : simProgress < 90 ? 'Analisando danos...' : 'Gerando relatório...'}
                     </p>
                   </div>
                 )}
@@ -594,11 +704,11 @@ export function ResultsPage() {
                 </button>
                 <button
                   onClick={runSimulation}
-                  disabled={!simVehicle || isSimulating}
+                  disabled={!selectedVehicle || isSimulating}
                   className="px-6 py-3 bg-vw-blue text-white rounded-lg font-semibold hover:bg-vw-blue/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
                   <Play className="h-5 w-5" />
-                  {isSimulating ? 'Simulando...' : 'Iniciar Simulacao'}
+                  {isSimulating ? 'Simulando...' : 'Iniciar Simulação'}
                 </button>
               </div>
             </motion.div>

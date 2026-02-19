@@ -60,34 +60,6 @@ export function VehicleManagementPage() {
       </div>
 
       <div className="vw-container py-8">
-        {/* Actions Bar */}
-        <motion.div
-          className="flex flex-col md:flex-row gap-4 mb-6"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          {/* Search */}
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Buscar por modelo, VIN ou modelo BeamNG..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-vw-blue focus:border-transparent"
-            />
-          </div>
-
-          {/* Add Vehicle Button */}
-          <button
-            onClick={() => toast.success('Criação de veículo em breve!')}
-            className="vw-button-primary flex items-center gap-2"
-          >
-            <Plus className="h-5 w-5" />
-            Adicionar Veículo
-          </button>
-        </motion.div>
-
         {/* Stats */}
         <motion.div
           className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6"
@@ -145,6 +117,34 @@ export function VehicleManagementPage() {
               </div>
             </div>
           </div>
+        </motion.div>
+
+        {/* Actions Bar */}
+        <motion.div
+          className="flex flex-col md:flex-row gap-4 mb-6"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          {/* Search */}
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Buscar por modelo, VIN ou modelo BeamNG..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-vw-blue focus:border-transparent"
+            />
+          </div>
+
+          {/* Add Vehicle Button */}
+          <button
+            onClick={() => toast.success('Criação de veículo em breve!')}
+            className="vw-button-primary flex items-center gap-2"
+          >
+            <Plus className="h-5 w-5" />
+            Adicionar Veículo
+          </button>
         </motion.div>
 
         {/* Vehicle List */}

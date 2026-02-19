@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Package,
+  Wrench,
   Search,
   Filter,
   Eye,
@@ -30,14 +30,14 @@ const getDisplayName = (part: Part) => part.name_pt || part.name
 
 const categoryLabels: Record<string, string> = {
   engine: 'Motor',
-  transmission: 'Transmissao',
+  transmission: 'Transmissão',
   exhaust: 'Escapamento',
-  fuel_system: 'Combustivel',
+  fuel_system: 'Combustível',
   cooling: 'Arrefecimento',
-  lighting: 'Iluminacao',
-  suspension: 'Suspensao',
-  steering: 'Direcao',
-  driveshaft: 'Transmissao/Eixo',
+  lighting: 'Iluminação',
+  suspension: 'Suspensão',
+  steering: 'Direção',
+  driveshaft: 'Transmissão/Eixo',
   interior: 'Interior',
   glass: 'Vidros',
   body: 'Carroceria',
@@ -102,11 +102,11 @@ export function PartsPage() {
             animate={{ opacity: 1, y: 0 }}
           >
             <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-              <Package className="h-8 w-8" />
-              Catalogo de Pecas VW
+              <Wrench className="h-8 w-8" />
+              Catálogo de Peças VW
             </h1>
             <p className="text-blue-200 mt-2">
-              Consulte e gerencie o inventario de pecas genuinas Volkswagen
+              Consulte e gerencie o inventário de peças genuínas Volkswagen
             </p>
           </motion.div>
         </div>
@@ -122,11 +122,11 @@ export function PartsPage() {
           <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                <Package className="h-5 w-5 text-blue-600" />
+                <Wrench className="h-5 w-5 text-blue-600" />
               </div>
               <div>
                 <p className="text-2xl font-bold text-gray-900">{parts.length}</p>
-                <p className="text-sm text-gray-500">Total de Pecas</p>
+                <p className="text-sm text-gray-500">Total de Peças</p>
               </div>
             </div>
           </div>
@@ -178,7 +178,7 @@ export function PartsPage() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
               <input
                 type="text"
-                placeholder="Buscar por nome da peca ou numero..."
+                placeholder="Buscar por nome da peça ou número..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-vw-blue focus:border-transparent"
@@ -214,17 +214,17 @@ export function PartsPage() {
           {isLoading ? (
             <div className="col-span-full py-12 text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-vw-blue mx-auto"></div>
-              <p className="text-gray-500 mt-3">Carregando pecas...</p>
+              <p className="text-gray-500 mt-3">Carregando peças...</p>
             </div>
           ) : error ? (
             <div className="col-span-full py-12 text-center text-red-500">
               <AlertTriangle className="h-12 w-12 mx-auto mb-3" />
-              <p>Erro ao carregar pecas. Tente novamente.</p>
+              <p>Erro ao carregar peças. Tente novamente.</p>
             </div>
           ) : filteredParts.length === 0 ? (
             <div className="col-span-full py-12 text-center">
-              <Package className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-500">Nenhuma peca encontrada</p>
+              <Wrench className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-500">Nenhuma peça encontrada</p>
             </div>
           ) : (
             filteredParts.map((part, index) => (
@@ -240,8 +240,8 @@ export function PartsPage() {
                 <div className="p-4">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-vw-blue/10 rounded-lg flex items-center justify-center">
-                        <Package className="h-5 w-5 text-vw-blue" />
+                      <div className="w-10 h-10 bg-vw-blue rounded-lg flex items-center justify-center">
+                        <Wrench className="h-5 w-5 text-white" />
                       </div>
                       <div>
                         <h3 className="font-semibold text-gray-900 line-clamp-1">{getDisplayName(part)}</h3>
@@ -252,10 +252,6 @@ export function PartsPage() {
                       {availabilityLabels[part.availability_status || 'available'] || part.availability_status}
                     </span>
                   </div>
-
-                  {part.name_pt && part.name_pt !== part.name && (
-                    <p className="text-sm text-gray-500 mb-3 italic">{part.name}</p>
-                  )}
 
                   <div className="flex items-center justify-between pt-3 border-t border-gray-100">
                     <div className="flex items-center gap-4">
@@ -293,7 +289,7 @@ export function PartsPage() {
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
           >
-            Mostrando {filteredParts.length} de {parts.length} pecas
+            Mostrando {filteredParts.length} de {parts.length} peças
           </motion.div>
         )}
       </div>
@@ -311,8 +307,8 @@ export function PartsPage() {
               {/* Modal Header */}
               <div className="flex items-center justify-between p-6 border-b bg-vw-blue text-white">
                 <h2 className="text-xl font-bold flex items-center gap-2">
-                  <Package className="h-6 w-6" />
-                  Detalhes da Peca
+                  <Wrench className="h-6 w-6" />
+                  Detalhes da Peça
                 </h2>
                 <button
                   onClick={() => setShowDetails(false)}
@@ -326,15 +322,12 @@ export function PartsPage() {
               <div className="p-6">
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-500 mb-1">Nome da Peca</label>
+                    <label className="block text-sm font-medium text-gray-500 mb-1">Nome da Peça</label>
                     <p className="text-lg font-semibold">{getDisplayName(selectedPart)}</p>
-                    {selectedPart.name_pt && (
-                      <p className="text-sm text-gray-500 mt-1">EN: {selectedPart.name}</p>
-                    )}
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-500 mb-1">Numero da Peca</label>
+                      <label className="block text-sm font-medium text-gray-500 mb-1">Número da Peça</label>
                       <p className="font-mono text-gray-900">{selectedPart.part_number}</p>
                     </div>
                     <div>
@@ -344,11 +337,11 @@ export function PartsPage() {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-500 mb-1">Preco</label>
+                      <label className="block text-sm font-medium text-gray-500 mb-1">Preço</label>
                       <p className="text-2xl font-bold text-vw-blue">{formatCurrency(selectedPart.price_brl)}</p>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-500 mb-1">Tempo de Mao de Obra</label>
+                      <label className="block text-sm font-medium text-gray-500 mb-1">Tempo de Mão de Obra</label>
                       <p className="text-lg font-semibold">{selectedPart.labor_hours || '0'}h</p>
                     </div>
                   </div>

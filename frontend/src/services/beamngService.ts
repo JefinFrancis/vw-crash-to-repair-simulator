@@ -7,8 +7,12 @@ export interface LatestCrashResponse {
   crash_time?: string
   vehicle_model?: string
   total_damage?: number
-  damage_by_zone?: Record<string, number>
+  damaged_parts_count?: number
   broken_parts_count?: number
+  damaged_parts?: Array<{ name: string; partId: string; damage: number }>
+  broken_parts?: string[]
+  part_damage?: Record<string, number>
+  damage_by_zone?: Record<string, number>
   speed_at_impact?: number
   estimate_ready?: boolean
 }

@@ -8,6 +8,7 @@ export function Header() {
   const { currentScreen, selectedVehicle, setSelectedVehicle, setCurrentScreen } = useAppStore()
 
   const handleResetSession = () => {
+    sessionStorage.removeItem('vw_results_mode')
     setSelectedVehicle(undefined)
     setCurrentScreen('landing')
     navigate('/home')

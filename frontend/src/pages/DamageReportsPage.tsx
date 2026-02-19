@@ -362,7 +362,7 @@ export function DamageReportsPage() {
                 </div>
                 <div>
                   <p className="font-bold text-gray-900">{selectedCrash.vehicle?.brand} {selectedCrash.vehicle?.name}</p>
-                  <p className="text-sm text-gray-500">Veiculo</p>
+                  <p className="text-sm text-gray-500">Veículo</p>
                 </div>
               </div>
             </div>
@@ -407,16 +407,16 @@ export function DamageReportsPage() {
               <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
                 <h2 className="text-lg font-bold text-gray-900 mb-1 flex items-center gap-2">
                   <Package className="h-5 w-5 text-vw-blue" />
-                  Pecas Danificadas ({resolvedParts.length})
+                  Peças Danificadas ({resolvedParts.length})
                 </h2>
                 <p className="text-sm text-gray-500 mb-4">
-                  {matchedCount} de {resolvedParts.length} pecas identificadas no catalogo
+                  {matchedCount} de {resolvedParts.length} peças identificadas no catálogo
                 </p>
 
                 {/* Table header */}
                 <div className="grid grid-cols-12 gap-4 text-sm font-semibold text-gray-500 border-b border-gray-200 pb-2 mb-3">
                   <div className="col-span-1"></div>
-                  <div className="col-span-5">Peca</div>
+                  <div className="col-span-5">Peça</div>
                   <div className="col-span-3">Severidade</div>
                   <div className="col-span-3 text-right">Valor</div>
                 </div>
@@ -441,7 +441,7 @@ export function DamageReportsPage() {
                               <p className="text-xs text-gray-400 italic">{part.name_en}</p>
                             )}
                             {!part.matched && (
-                              <p className="text-xs text-amber-500">Nao catalogada</p>
+                              <p className="text-xs text-amber-500">Não catalogada</p>
                             )}
                           </div>
                           <div className="col-span-3">
@@ -462,7 +462,7 @@ export function DamageReportsPage() {
                   ) : (
                     <div className="py-8 text-center text-gray-400">
                       <Package className="h-8 w-8 mx-auto mb-2" />
-                      <p>Nenhuma peca danificada identificada</p>
+                      <p>Nenhuma peça danificada identificada</p>
                     </div>
                   )}
                 </div>
@@ -511,12 +511,12 @@ export function DamageReportsPage() {
               <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 sticky top-6">
                 <div className="flex items-center gap-2 mb-4">
                   <DollarSign className="h-5 w-5 text-green-600" />
-                  <h2 className="text-lg font-bold text-gray-900">Valor da Manutencao</h2>
+                  <h2 className="text-lg font-bold text-gray-900">Valor da Manutenção</h2>
                 </div>
                 <p className="text-sm text-gray-500 mb-4">
-                  Estimativa baseada em {matchedCount} pecas identificadas no catalogo VW.
+                  Estimativa baseada em {matchedCount} peças identificadas no catálogo VW.
                   {resolvedParts.length > matchedCount && (
-                    <span className="text-amber-600"> {resolvedParts.length - matchedCount} pecas nao catalogadas.</span>
+                    <span className="text-amber-600"> {resolvedParts.length - matchedCount} peças não catalogadas.</span>
                   )}
                 </p>
                 <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
@@ -527,11 +527,11 @@ export function DamageReportsPage() {
                 </div>
                 <div className="space-y-2 text-sm text-gray-600">
                   <div className="flex justify-between">
-                    <span>Pecas ({matchedCount}x)</span>
+                    <span>Peças ({matchedCount}x)</span>
                     <span className="font-medium">{formatBRL(partsCost)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Mao de obra ({totalLaborHours.toFixed(1)}h)</span>
+                    <span>Mão de obra ({totalLaborHours.toFixed(1)}h)</span>
                     <span className="font-medium">{formatBRL(laborCost)}</span>
                   </div>
                   <div className="border-t border-gray-200 pt-2 flex justify-between font-bold text-gray-900">
@@ -547,7 +547,7 @@ export function DamageReportsPage() {
                     className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-vw-blue text-white rounded-lg hover:bg-blue-700 transition-colors"
                   >
                     <Calendar className="h-4 w-4" />
-                    Agendar Manutencao
+                    Agendar Manutenção
                   </button>
                   <button
                     onClick={() => toast.success('Lembrete enviado!')}
@@ -571,7 +571,7 @@ export function DamageReportsPage() {
       <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="h-12 w-12 animate-spin text-vw-blue mx-auto mb-4" />
-          <p className="text-gray-600">Carregando relatorios...</p>
+          <p className="text-gray-600">Carregando relatórios...</p>
         </div>
       </div>
     )
@@ -591,10 +591,10 @@ export function DamageReportsPage() {
           >
             <h1 className="text-3xl font-bold text-white flex items-center gap-3">
               <FileText className="h-8 w-8" />
-              Relatorios de Sinistros
+              Relatórios de Sinistros
             </h1>
             <p className="text-blue-200 mt-2">
-              Todos os sinistros registrados de todos os veiculos
+              Todos os sinistros registrados de todos os veículos
             </p>
           </motion.div>
         </div>
@@ -636,7 +636,7 @@ export function DamageReportsPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-gray-900">{uniqueVehicles}</p>
-                <p className="text-sm text-gray-500">Veiculos Unicos</p>
+                <p className="text-sm text-gray-500">Veículos Únicos</p>
               </div>
             </div>
           </div>
@@ -665,7 +665,7 @@ export function DamageReportsPage() {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
             <input
               type="text"
-              placeholder="Buscar por veiculo ou ID do sinistro..."
+              placeholder="Buscar por veículo ou ID do sinistro..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-vw-blue focus:border-transparent"
@@ -692,12 +692,12 @@ export function DamageReportsPage() {
           {/* Table Header */}
           <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
             <div className="grid grid-cols-12 gap-4 text-sm font-semibold text-gray-600">
-              <div className="col-span-2">Veiculo</div>
+              <div className="col-span-2">Veículo</div>
               <div className="col-span-2">Severidade</div>
               <div className="col-span-2">Data</div>
-              <div className="col-span-1">Pecas</div>
-              <div className="col-span-2">Valor Manutencao</div>
-              <div className="col-span-3 text-right">Acoes</div>
+              <div className="col-span-1">Peças</div>
+              <div className="col-span-2">Valor Manutenção</div>
+              <div className="col-span-3 text-right">Ações</div>
             </div>
           </div>
 
@@ -712,7 +712,7 @@ export function DamageReportsPage() {
                     </div>
                     <h3 className="text-2xl font-bold text-gray-800 mb-3">Nenhum sinistro ainda</h3>
                     <p className="text-lg text-gray-500 mb-2">Ainda dirigindo por ai...</p>
-                    <p className="text-sm text-gray-400">Os sinistros aparecerao aqui automaticamente quando detectados pelo simulador BeamNG.drive</p>
+                    <p className="text-sm text-gray-400">Os sinistros aparecerão aqui automaticamente quando detectados pelo simulador BeamNG.drive</p>
                   </div>
                 ) : (
                   <div>
@@ -772,7 +772,7 @@ export function DamageReportsPage() {
 
                       {/* Broken Parts */}
                       <div className="col-span-1 text-gray-600">
-                        {crash.damage.broken_parts_count} pecas
+                        {crash.damage.broken_parts_count} peças
                       </div>
 
                       {/* Maintenance Cost - DB-driven */}
@@ -787,7 +787,7 @@ export function DamageReportsPage() {
                         <button
                           onClick={(e) => { e.stopPropagation(); toast.success('Agendamento em breve!') }}
                           className="p-1.5 rounded-md border border-blue-200 bg-white hover:bg-blue-50 text-blue-600 transition-colors"
-                          title="Agendar manutencao"
+                          title="Agendar manutenção"
                         >
                           <Calendar className="h-4 w-4" />
                         </button>

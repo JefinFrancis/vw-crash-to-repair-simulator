@@ -47,10 +47,10 @@ export function LandingPage() {
           >
             <h1 className="text-3xl font-bold text-white flex items-center gap-3">
               <Car className="h-8 w-8" />
-              Selecionar Veiculo
+              Selecionar Veículo
             </h1>
             <p className="text-blue-200 mt-2">
-              Escolha um veiculo para iniciar a experiencia de colisao
+              Escolha um veículo para iniciar a experiência de colisão
             </p>
           </motion.div>
         </div>
@@ -79,16 +79,16 @@ export function LandingPage() {
         {isLoading ? (
           <div className="flex items-center justify-center py-16">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-vw-blue"></div>
-            <span className="ml-3 text-gray-600">Carregando veiculos...</span>
+            <span className="ml-3 text-gray-600">Carregando veículos...</span>
           </div>
         ) : filteredVehicles.length === 0 ? (
           <div className="text-center py-16 text-gray-500">
             <Car className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-            <p className="text-lg mb-1">Nenhum veiculo encontrado</p>
+            <p className="text-lg mb-1">Nenhum veículo encontrado</p>
             <p className="text-sm">
-              Cadastre veiculos na pagina de{' '}
+              Cadastre veículos na página de{' '}
               <button onClick={() => navigate('/vehicles')} className="text-vw-blue hover:underline">
-                Veiculos
+                Veículos
               </button>
             </p>
           </div>
@@ -133,7 +133,7 @@ export function LandingPage() {
 
         {/* Count */}
         <p className="text-center text-gray-400 text-sm mt-6">
-          {filteredVehicles.length} veiculo(s) disponivel(is)
+          {filteredVehicles.length} veículo(s) disponível(is)
         </p>
       </div>
     </div>
