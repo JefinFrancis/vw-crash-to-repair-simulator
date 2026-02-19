@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..repositories.customer import CustomerRepository
 from ..repositories.dealer import DealerRepository
 from ..schemas.customer import CustomerCreate, CustomerUpdate, CustomerResponse
-from ..exceptions import ValidationException, NotFoundException
+from ..utils.exceptions import ValidationException, NotFoundException
 from .base import BaseService
 
 logger = structlog.get_logger(__name__)

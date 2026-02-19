@@ -797,7 +797,7 @@ export function AppointmentPage() {
                 Voltar ao Início
               </button>
               <button
-                onClick={() => navigate('/simulation')}
+                onClick={() => navigate('/damage-reports')}
                 className="w-full py-3 px-6 border-2 border-vw-blue text-vw-blue rounded-lg font-semibold hover:bg-blue-50 transition-colors"
               >
                 Nova Simulação

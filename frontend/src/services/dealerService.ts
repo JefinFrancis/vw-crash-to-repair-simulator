@@ -25,6 +25,18 @@ export const dealerService = {
     return apiClient.get(`/dealers/?${queryParams.toString()}`)
   },
 
+  // Create a new dealer
+  create: (data: {
+    name: string
+    cnpj: string
+    address: string
+    city: string
+    state: string
+    postal_code: string
+    phone: string
+    email?: string
+  }): Promise<Dealer> => apiClient.post('/dealers/', data),
+
   // Search nearby dealers
   searchNearby: (params: {
     latitude: number

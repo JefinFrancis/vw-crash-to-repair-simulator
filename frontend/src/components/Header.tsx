@@ -1,10 +1,17 @@
-import { Link, useLocation } from 'react-router-dom'
-import { Car, Zap } from 'lucide-react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Car, Zap, RotateCcw } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
 
 export function Header() {
   const location = useLocation()
-  const { currentScreen, selectedVehicle } = useAppStore()
+  const navigate = useNavigate()
+  const { currentScreen, selectedVehicle, setSelectedVehicle, setCurrentScreen } = useAppStore()
+
+  const handleResetSession = () => {
+    setSelectedVehicle(undefined)
+    setCurrentScreen('landing')
+    navigate('/home')
+  }
   
   return (
     <header className="bg-vw-blue text-white shadow-lg">
@@ -67,13 +74,14 @@ export function Header() {
               </div>
             )}
 
-            {/* Quick Actions */}
+            {/* Reset Session */}
             <button
-              onClick={() => window.location.reload()}
-              className="p-2 hover:bg-vw-blue-dark rounded-lg transition-colors"
-              title="Reiniciar Sessão"
+              onClick={handleResetSession}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm hover:bg-vw-blue-dark rounded-lg transition-colors"
+              title="Reiniciar Sessao"
             >
-              <Zap className="h-4 w-4" />
+              <RotateCcw className="h-4 w-4" />
+              <span className="hidden md:inline text-blue-200">Reiniciar</span>
             </button>
           </div>
         </div>

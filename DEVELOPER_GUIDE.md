@@ -272,14 +272,12 @@ vw-crash-to-repair-simulator/
 │   │   ├── Router.tsx           # Route definitions
 │   │   ├── pages/               # Page components
 │   │   │   ├── LandingPage.tsx
-│   │   │   ├── SimulationPage.tsx
-│   │   │   ├── AnalysisPage.tsx
+│   │   │   ├── DamageReportsPage.tsx
 │   │   │   ├── ResultsPage.tsx
 │   │   │   ├── DealerNetworkPage.tsx
 │   │   │   ├── AppointmentPage.tsx
 │   │   │   ├── VehicleManagementPage.tsx
-│   │   │   ├── PartsPage.tsx
-│   │   │   └── DamageReportsPage.tsx
+│   │   │   └── PartsPage.tsx
 │   │   ├── components/          # Reusable components
 │   │   ├── services/            # API client services
 │   │   ├── store/               # Zustand stores
@@ -424,6 +422,7 @@ http://localhost:8000/api/v1
 |--------|----------|-------------|
 | GET | `/parts/` | List all parts |
 | GET | `/parts/{id}` | Get part by ID |
+| POST | `/parts/` | Create part |
 | GET | `/parts/search` | Search parts |
 
 ### Dealer Endpoints
@@ -432,6 +431,7 @@ http://localhost:8000/api/v1
 |--------|----------|-------------|
 | GET | `/dealers/` | List all dealers |
 | GET | `/dealers/{id}` | Get dealer by ID |
+| POST | `/dealers/` | Create dealer |
 | GET | `/dealers/nearby` | Find nearby dealers |
 
 ### BeamNG Endpoints
@@ -472,15 +472,13 @@ http://localhost:8000/api/v1
 
 | Route | Component | Description |
 |-------|-----------|-------------|
-| `/` | LandingPage | Home page with demo |
-| `/simulation` | SimulationPage | Crash simulation setup |
-| `/analysis` | AnalysisPage | AI damage analysis |
+| `/` | LandingPage | Dashboard home with stats and navigation |
+| `/damage-reports` | DamageReportsPage | Crash list with DB-driven costs + detail view |
 | `/results` | ResultsPage | Repair estimate results |
-| `/dealers` | DealerNetworkPage | Find dealers |
-| `/appointment` | AppointmentPage | Book service |
-| `/vehicles` | VehicleManagementPage | Manage vehicles |
-| `/parts` | PartsPage | Parts catalog |
-| `/reports` | DamageReportsPage | Damage reports |
+| `/dealers` | DealerNetworkPage | Dealer network with create modal |
+| `/appointment` | AppointmentPage | Book service at VW dealer |
+| `/vehicles` | VehicleManagementPage | Vehicle CRUD management |
+| `/parts` | PartsPage | Parts catalog with create modal |
 
 ### State Management
 
@@ -527,11 +525,15 @@ export const vehicleService = {
 
 1. **API returns arrays directly**, NOT paginated responses
    - Correct: `const vehicles = await vehicleService.getAll()` returns `Vehicle[]`
-   - Wrong: Expecting `{ items: Vehicle[] }`
+   - Wrong: Expecting `{ items: Vehicle[], total: number }`
 
 2. **Vehicle model doesn't include `make` field** - use hardcoded "Volkswagen"
 
-3. **All text must be in English** - no Portuguese
+3. **UI text is in Brazilian Portuguese** - this is a VW Brazil product
+
+4. **Parts pricing is DB-driven** - 51 parts auto-seeded from `VEHICLE_PARTS.csv` on startup with PT names, BRL prices, and labor hours
+
+5. **CSS class naming** - use `vw-button-primary` and `vw-button-secondary` (NOT `vw-btn-*`)
 
 ---
 
@@ -704,12 +706,13 @@ SELECT * FROM vehicles LIMIT 10;
 | Table | Description |
 |-------|-------------|
 | `vehicles` | VW vehicles for simulation |
-| `vw_parts` | Parts catalog |
-| `vw_dealers` | Dealer network |
+| `parts` | Parts catalog (auto-seeded from CSV) |
+| `dealers` | Dealer network |
+| `customers` | Customer profiles |
 | `damage_reports` | Crash damage reports |
 | `damage_components` | Individual damaged parts |
-| `repair_estimates` | Cost estimates |
-| `service_appointments` | Booked appointments |
+| `estimates` | Repair cost estimates |
+| `appointments` | Service appointments |
 
 ---
 
@@ -864,7 +867,7 @@ This is a **VW Crash-to-Repair Simulator** that:
    <span>{vehicle.make} {vehicle.model}</span>
    ```
 
-3. **Language**: All UI text must be in **English only** (no Portuguese)
+3. **Language**: UI text is in **Brazilian Portuguese** (this is a VW Brazil product)
 
 4. **Docker Required**: Always use `sudo docker compose` commands on Linux
 
@@ -960,4 +963,4 @@ For issues or questions:
 
 ---
 
-**Last Updated**: January 30, 2026
+**Last Updated**: February 19, 2026

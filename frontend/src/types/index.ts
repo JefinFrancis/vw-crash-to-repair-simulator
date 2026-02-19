@@ -27,28 +27,6 @@ export interface VehicleCreate {
   beamng_config?: string;
 }
 
-// Customer Types
-export interface Customer {
-  id: string;
-  name: string;
-  phone: string;  // Brazilian mobile format: 5511999999999
-  preferred_dealer_cnpj?: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface CustomerCreate {
-  name: string;
-  phone: string;
-  preferred_dealer_cnpj?: string;
-}
-
-export interface CustomerUpdate {
-  name?: string;
-  phone?: string;
-  preferred_dealer_cnpj?: string;
-}
-
 // Dealer Types
 export interface Dealer {
   id: string;
@@ -90,7 +68,8 @@ export interface DealerPerformance {
 export interface Part {
   id: string;
   part_number: string;
-  name: string;
+  name: string;        // English name (from BeamNG)
+  name_pt?: string;    // Portuguese name (for UI display)
   description?: string;
   price_brl: string;
   labor_hours?: string;
@@ -137,6 +116,7 @@ export interface DamageZone {
 export interface ComponentDamage {
   component_id: string;
   component_name: string;
+  component_name_pt?: string;
   part_number?: string;
   damage_type: DamageType;
   severity: DamageSeverity;
@@ -145,6 +125,7 @@ export interface ComponentDamage {
   replacement_required: boolean;
   estimated_repair_hours: number;
   estimated_cost: number;
+  estimated_cost_brl?: number;
   safety_critical: boolean;
   affects_drivability: boolean;
 }

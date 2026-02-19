@@ -32,10 +32,10 @@ Production-ready "Crash-to-Repair" digital experience featuring:
 
 ```bash
 # Clone and navigate to project
-cd /home/jefin/Desktop/VW/vw-crash-to-repair-simulator
+git clone <repo-url> && cd VW
 
-# One-command setup (installs everything)
-make setup
+# Start all services
+docker-compose up -d
 ```
 
 ### 2. Start Development Environment
@@ -98,7 +98,7 @@ vw-crash-to-repair-simulator/
 │
 ├── frontend/                   # React application  
 │   ├── src/
-│   │   ├── pages/             # Route components (Dashboard, Simulation, Analysis)
+│   │   ├── pages/             # Route components (Landing, DamageReports, Results, Parts, Dealers, etc.)
 │   │   ├── components/        # Reusable UI components
 │   │   ├── api/               # API client functions
 │   │   ├── hooks/             # Custom React hooks
@@ -118,28 +118,15 @@ vw-crash-to-repair-simulator/
 
 ## 🔄 Migration Status
 
-> **🚧 ARCHITECTURE MIGRATION IN PROGRESS**  
-> Upgrading from MVP (HTML/CSS/JS) → Modern Stack (React+TypeScript+PostgreSQL)
-
 | Component | Status | Progress |
 |-----------|--------|----------|
 | **📋 Architecture Planning** | ✅ Complete | Migration strategy documented |
-| **🐳 Development Infrastructure** | ⚠️ In Progress | Docker Compose, Makefile, environments |
-| **🗄️ Database Migration** | 🔄 Planned | PostgreSQL schema, Alembic migrations |
-| **⚙️ Backend Restructuring** | 🔄 Planned | Repository/Service pattern, async SQLAlchemy |
-| **⚛️ Frontend React Migration** | 🔄 Planned | React+TypeScript, Zustand, Tailwind CSS |
-| **🔗 API Integration** | 🔄 Planned | React Query, proper error handling |
-| **✅ Testing & Validation** | 🔄 Planned | Unit tests, integration tests, E2E |
-
-### Current System (MVP)
-The current functional MVP is available while migration is in progress:
-- **Legacy Frontend**: Basic HTML/CSS/JS interface (port 8080)
-- **Legacy API**: FastAPI backend (port 8001) 
-- **Legacy Data**: JSON files for parts/dealers
-- **BeamNG**: Fully functional integration
-
-### Migration Plan
-See [docs/MIGRATION_PLAN.md](docs/MIGRATION_PLAN.md) for complete technical details.
+| **🐳 Development Infrastructure** | ✅ Complete | Docker Compose, Makefile, environments |
+| **🗄️ Database Migration** | ✅ Complete | PostgreSQL schema, auto-seed from CSV on startup |
+| **⚙️ Backend Restructuring** | ✅ Complete | Repository/Service pattern, async SQLAlchemy |
+| **⚛️ Frontend React Migration** | ✅ Complete | React+TypeScript, Zustand, Tailwind CSS |
+| **🔗 API Integration** | ✅ Complete | React Query, proper error handling |
+| **🎮 Game Reporting** | ✅ Complete | Crash-to-repair flow with DB-driven pricing |
 
 ---
 
@@ -232,11 +219,12 @@ The system includes sample crash data for demonstrations without BeamNG installe
 - **Inventory checking** and part availability
 - **Appointment scheduling** with Brazilian business hours
 
-### Parts Catalog  
-- **Authentic VW part numbers** and specifications
-- **BRL pricing** with current exchange rates
-- **Labor time estimates** for Brazilian service standards
+### Parts Catalog
+- **51 VW T-Cross parts** seeded automatically from `VEHICLE_PARTS.csv` on startup
+- **BRL pricing** and Portuguese part names (`name_pt`)
+- **Labor time estimates** in hours (converted from CSV minutes)
 - **Availability tracking** across dealer network
+- **DB-driven pricing** used in damage report cost calculations
 
 ### Localization
 - **Portuguese interface** with Brazilian terminology
@@ -324,4 +312,4 @@ MIT License - Object Edge Internal Project
 **Contact:** Object Edge Development Team  
 **Project Manager:** Jefin  
 **Event Date:** March 2026  
-**Status:** ✅ MVP Complete | 🔄 Architecture Modernization In Progress
+**Status:** ✅ Modern Architecture Complete | Game Reporting Flow Operational

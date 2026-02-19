@@ -25,6 +25,18 @@ export const partService = {
     return apiClient.get(`/parts/?${queryParams.toString()}`)
   },
 
+  // Create a new part
+  create: (data: {
+    part_number: string
+    name: string
+    description?: string
+    category: string
+    price_brl: number
+    labor_hours?: number
+    supplier?: string
+    availability_status?: string
+  }): Promise<Part> => apiClient.post('/parts/', data),
+
   // Get part by ID
   getById: (partId: string): Promise<Part> =>
     apiClient.get(`/parts/${partId}/`),

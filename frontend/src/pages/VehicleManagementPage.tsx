@@ -81,7 +81,7 @@ export function VehicleManagementPage() {
           {/* Add Vehicle Button */}
           <button
             onClick={() => toast.success('Criação de veículo em breve!')}
-            className="vw-btn-primary flex items-center gap-2"
+            className="vw-button-primary flex items-center gap-2"
           >
             <Plus className="h-5 w-5" />
             Adicionar Veículo
@@ -316,13 +316,13 @@ export function VehicleManagementPage() {
               <div className="p-6 border-t bg-gray-50 flex justify-end gap-3">
                 <button
                   onClick={() => setShowDetails(false)}
-                  className="vw-btn-secondary"
+                  className="vw-button-secondary"
                 >
                   Fechar
                 </button>
                 <button
                   onClick={() => toast.success('Edição em breve!')}
-                  className="vw-btn-primary flex items-center gap-2"
+                  className="vw-button-primary flex items-center gap-2"
                 >
                   <Edit className="h-4 w-4" />
                   Editar Veículo

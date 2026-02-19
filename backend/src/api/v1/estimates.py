@@ -199,46 +199,46 @@ async def calculate_estimate(
                 total_cost_brl=component_labor_cost
             ))
             
-            # Look up part price if part_number provided
-            if damage.part_number and damage.replacement_required:
-                # Query parts database
-                result = await session.execute(
-                    text("SELECT name, price_brl, availability_status FROM parts WHERE part_number = :pn"),
-                    {"pn": damage.part_number}
-                )
-                part_row = result.fetchone()
-                
+            # Look up part price: by part_number first, then by English name
+            if damage.replacement_required:
+                part_row = None
+
+                # Try lookup by part_number
+                if damage.part_number:
+                    result = await session.execute(
+                        text("SELECT part_number, name, name_pt, price_brl, availability_status FROM parts WHERE part_number = :pn"),
+                        {"pn": damage.part_number}
+                    )
+                    part_row = result.fetchone()
+
+                # Fallback: lookup by English component name
+                if not part_row:
+                    result = await session.execute(
+                        text("SELECT part_number, name, name_pt, price_brl, availability_status FROM parts WHERE LOWER(name) = LOWER(:name)"),
+                        {"name": damage.component_name}
+                    )
+                    part_row = result.fetchone()
+
                 if part_row:
-                    part_name, price_brl, availability = part_row
+                    pn, name_en, name_pt, price_brl, availability = part_row
                     part_price = Decimal(str(price_brl)) if price_brl else Decimal("500.00")
-                    
+                    display_name = name_pt or name_en or damage.component_name
                     delivery_days = 1 if availability == "available" else 7
-                    
+
                     parts_breakdown.append(PartCost(
-                        part_number=damage.part_number,
-                        part_name=part_name or damage.component_name,
+                        part_number=pn or damage.part_number or "N/A",
+                        part_name=display_name,
                         quantity=1,
                         unit_price_brl=part_price,
                         total_price_brl=part_price,
                         availability=availability or "available",
                         estimated_delivery_days=delivery_days
                     ))
-                    
+
                     total_parts_cost += part_price
                 else:
-                    # Estimate price based on component type
-                    estimated_price = Decimal("800.00")  # Default estimate
-                    if "bumper" in damage.component_name.lower():
-                        estimated_price = Decimal("850.00")
-                    elif "hood" in damage.component_name.lower() or "capô" in damage.component_name.lower():
-                        estimated_price = Decimal("1250.00")
-                    elif "fender" in damage.component_name.lower() or "paralama" in damage.component_name.lower():
-                        estimated_price = Decimal("680.00")
-                    elif "headlight" in damage.component_name.lower() or "farol" in damage.component_name.lower():
-                        estimated_price = Decimal("2200.00")
-                    elif "door" in damage.component_name.lower() or "porta" in damage.component_name.lower():
-                        estimated_price = Decimal("1800.00")
-                    
+                    # Part not found in DB - use a conservative default
+                    estimated_price = Decimal("500.00")
                     parts_breakdown.append(PartCost(
                         part_number=damage.part_number or "ESTIMATE",
                         part_name=damage.component_name,
@@ -248,7 +248,7 @@ async def calculate_estimate(
                         availability="estimated",
                         estimated_delivery_days=5
                     ))
-                    
+
                     total_parts_cost += estimated_price
                     notes.append(f"Preço estimado para {damage.component_name} - confirmar com concessionária")
         

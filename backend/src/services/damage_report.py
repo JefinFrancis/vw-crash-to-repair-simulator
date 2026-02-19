@@ -12,8 +12,10 @@ import logging
 from datetime import datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, func
 
 from .base import BaseService
+from ..models.part import Part
 from ..utils.exceptions import ValidationException, ServiceException
 
 logger = logging.getLogger(__name__)
@@ -216,54 +218,113 @@ class DamageReportService(BaseService):
             }
 
     async def _identify_damaged_parts(self, zone_name: str, damage_level: float) -> List[Dict[str, Any]]:
-        """Identify specific damaged parts based on zone and damage level."""
-        # VW parts mapping by zone
+        """Identify specific damaged parts based on zone and damage level.
+
+        Uses English part names from the DB to map zone components.
+        The threshold indicates the minimum damage_level for that part to be affected.
+        """
+        # Map zones to DB part English names with damage thresholds
         zone_parts_mapping = {
             'front_end': [
-                {'part_number': '1J0807221', 'name': 'Front Bumper Cover', 'threshold': 15},
-                {'part_number': '5G0823300', 'name': 'Hood', 'threshold': 30},
-                {'part_number': '5G0809857', 'name': 'Front Fender', 'threshold': 25},
-                {'part_number': '5G0941006', 'name': 'Headlight Assembly', 'threshold': 35}
+                {'name': 'Front Bumper', 'threshold': 15},
+                {'name': 'T-Cross Hood', 'threshold': 30},
+                {'name': 'Front Left Fender', 'threshold': 25},
+                {'name': 'Front Right Fender', 'threshold': 25},
+                {'name': 'Halogen Left Headlight', 'threshold': 35},
+                {'name': 'Halogen Right Headlight', 'threshold': 35},
             ],
             'passenger_compartment': [
-                {'part_number': '5G0831055', 'name': 'Door Shell', 'threshold': 40},
-                {'part_number': '5G0845011', 'name': 'Windshield', 'threshold': 20},
-                {'part_number': '5G0867011', 'name': 'Door Panel', 'threshold': 30}
+                {'name': 'Front Left Door', 'threshold': 40},
+                {'name': 'Front Right Door', 'threshold': 40},
+                {'name': 'Windshield', 'threshold': 20},
+                {'name': 'Front Left Door Glass', 'threshold': 30},
+                {'name': 'Front Right Door Glass', 'threshold': 30},
+                {'name': 'Left Mirror', 'threshold': 25},
+                {'name': 'Right Mirror', 'threshold': 25},
+            ],
+            'rear_end': [
+                {'name': 'T-Cross Rear Bumper', 'threshold': 15},
+                {'name': 'Tailgate', 'threshold': 30},
+                {'name': 'Tailgate Glass', 'threshold': 25},
+                {'name': 'Left Taillight', 'threshold': 35},
+                {'name': 'Right Taillight', 'threshold': 35},
+                {'name': 'Rear Left Door', 'threshold': 40},
+                {'name': 'Rear Right Door', 'threshold': 40},
             ],
             'engine_bay': [
-                {'part_number': '1K0199262', 'name': 'Engine Mount', 'threshold': 50},
-                {'part_number': '5G0121251', 'name': 'Radiator', 'threshold': 35},
-                {'part_number': '1J0201801', 'name': 'Fuel Tank', 'threshold': 60}
+                {'name': '1.0 TSI I3 Engine', 'threshold': 60},
+                {'name': 'Stock Engine Mounts', 'threshold': 50},
+                {'name': 'Stock Turbocharger', 'threshold': 55},
+                {'name': 'Radiator', 'threshold': 35},
+                {'name': 'Gasoline Fuel Tank', 'threshold': 60},
             ],
             'suspension': [
-                {'part_number': '5G0413031', 'name': 'Shock Strut', 'threshold': 40},
-                {'part_number': '5G0601025', 'name': 'Alloy Wheel', 'threshold': 25},
-                {'part_number': '5G0407151', 'name': 'Control Arm', 'threshold': 45}
-            ]
+                {'name': 'Front Struts', 'threshold': 40},
+                {'name': 'Front Spindles', 'threshold': 45},
+                {'name': 'Front Sway Bar', 'threshold': 35},
+                {'name': 'Independent Front Suspension', 'threshold': 50},
+                {'name': 'Rear Shocks', 'threshold': 40},
+                {'name': 'Rear Springs', 'threshold': 35},
+                {'name': 'Torsion Beam Rear Suspension', 'threshold': 50},
+                {'name': 'Steering', 'threshold': 45},
+            ],
+            'undercarriage': [
+                {'name': 'Exhaust', 'threshold': 25},
+                {'name': 'Downturned Single Exhaust Exit', 'threshold': 20},
+                {'name': '6-Speed Manual Transmission', 'threshold': 60},
+                {'name': 'Undertray', 'threshold': 15},
+                {'name': 'Unibody', 'threshold': 70},
+                {'name': 'Front Half Shafts', 'threshold': 45},
+                {'name': 'Open Front Differential', 'threshold': 50},
+            ],
         }
-        
+
         damaged_parts = []
         zone_parts = zone_parts_mapping.get(zone_name, [])
-        
-        for part_info in zone_parts:
-            if damage_level >= part_info['threshold']:
-                # Determine severity based on damage level
-                if damage_level >= 80:
-                    severity = 'total'
-                elif damage_level >= 60:
-                    severity = 'high'
-                elif damage_level >= 40:
-                    severity = 'medium'
-                else:
-                    severity = 'low'
-                
+
+        for part_ref in zone_parts:
+            if damage_level < part_ref['threshold']:
+                continue
+
+            # Determine severity based on damage level
+            if damage_level >= 80:
+                severity = 'total'
+            elif damage_level >= 60:
+                severity = 'high'
+            elif damage_level >= 40:
+                severity = 'medium'
+            else:
+                severity = 'low'
+
+            # Look up part from DB by English name
+            db_part = None
+            try:
+                result = await self.db_session.execute(
+                    select(Part).where(Part.name.ilike(part_ref['name']))
+                )
+                db_part = result.scalar_one_or_none()
+            except Exception:
+                pass
+
+            if db_part:
                 damaged_parts.append({
-                    'part_number': part_info['part_number'],
-                    'name': part_info['name'],
+                    'part_number': db_part.part_number,
+                    'name': db_part.name,
+                    'name_pt': db_part.name_pt,
+                    'price_brl': float(db_part.price_brl),
                     'severity': severity,
-                    'damage_percentage': min(100, damage_level)
+                    'damage_percentage': min(100, damage_level),
                 })
-        
+            else:
+                damaged_parts.append({
+                    'part_number': '',
+                    'name': part_ref['name'],
+                    'name_pt': None,
+                    'price_brl': 250.00,
+                    'severity': severity,
+                    'damage_percentage': min(100, damage_level),
+                })
+
         return damaged_parts
 
     async def _calculate_severity_score(self, damage_zones: List[Dict[str, Any]]) -> float:
@@ -465,28 +526,18 @@ class DamageReportService(BaseService):
             return f"{total_hours} hours"
 
     async def _estimate_zone_repair_cost(
-        self, 
-        affected_parts: List[Dict[str, Any]], 
+        self,
+        affected_parts: List[Dict[str, Any]],
         damage_level: float
     ) -> Decimal:
-        """Estimate repair cost for a zone."""
+        """Estimate repair cost for a zone using database prices."""
         try:
             total_cost = Decimal('0.00')
-            
+
             for part in affected_parts:
-                # Sample part costs (would come from parts catalog in real implementation)
-                part_costs = {
-                    '1J0807221': 850.00,   # Front Bumper
-                    '5G0823300': 1500.00,  # Hood
-                    '5G0809857': 1200.00,  # Front Fender
-                    '5G0941006': 2200.00,  # Headlight
-                    '5G0831055': 800.00,   # Door Shell
-                    '1K0199262': 320.00,   # Engine Mount
-                    '5G0601025': 780.00    # Wheel
-                }
-                
-                base_cost = part_costs.get(part.get('part_number', ''), 250.00)
-                
+                # Use the price_brl already resolved from DB in _identify_damaged_parts
+                base_cost = part.get('price_brl', 250.00)
+
                 # Severity multiplier
                 severity_multipliers = {
                     'low': 0.3,
@@ -494,20 +545,20 @@ class DamageReportService(BaseService):
                     'high': 1.2,
                     'total': 1.5
                 }
-                
+
                 multiplier = severity_multipliers.get(part.get('severity', 'medium'), 1.0)
                 part_cost = Decimal(str(base_cost)) * Decimal(str(multiplier))
                 total_cost += part_cost
-            
+
             # Add labor cost estimate (60% of parts cost)
             labor_cost = total_cost * Decimal('0.60')
             total_cost += labor_cost
-            
+
             return total_cost
-            
+
         except Exception as e:
             logger.error(f"Error estimating zone repair cost: {str(e)}")
-            return Decimal('500.00')  # Default estimate
+            return Decimal('500.00')
 
     async def _calculate_total_repair_estimate(self, damage_zones: List[Dict[str, Any]]) -> Decimal:
         """Calculate total repair estimate from all zones."""

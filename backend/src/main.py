@@ -10,7 +10,7 @@ from typing import AsyncGenerator
 import uvicorn
 
 from src.config import settings
-from src.database import initialize_db, close_db
+from src.database import initialize_db, close_db, seed_parts_if_empty
 from src.api.v1 import health, vehicles, damage, dealers, parts, appointments, beamng, estimates, customers
 from src.utils.logging import configure_logging
 
@@ -28,6 +28,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     try:
         await initialize_db()
         logger.info("Database initialized successfully")
+        await seed_parts_if_empty()
     except Exception as e:
         logger.error("Failed to initialize database", error=str(e))
         raise

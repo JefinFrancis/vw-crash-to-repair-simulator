@@ -339,7 +339,7 @@ export function CustomerManagementPage() {
           {/* Add Customer Button */}
           <button
             onClick={handleOpenCreateModal}
-            className="vw-btn-primary flex items-center gap-2"
+            className="vw-button-primary flex items-center gap-2"
           >
             <Plus className="h-5 w-5" />
             Adicionar Cliente
@@ -384,7 +384,7 @@ export function CustomerManagementPage() {
                 {!search && (
                   <button
                     onClick={handleOpenCreateModal}
-                    className="mt-4 vw-btn-primary inline-flex items-center gap-2"
+                    className="mt-4 vw-button-primary inline-flex items-center gap-2"
                   >
                     <Plus className="h-4 w-4" />
                     Adicionar Primeiro Cliente
@@ -564,14 +564,14 @@ export function CustomerManagementPage() {
                   <button
                     type="button"
                     onClick={handleCloseModal}
-                    className="flex-1 vw-btn-secondary"
+                    className="flex-1 vw-button-secondary"
                     disabled={createCustomerMutation.isPending || updateCustomerMutation.isPending}
                   >
                     Cancelar
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 vw-btn-primary flex items-center justify-center gap-2"
+                    className="flex-1 vw-button-primary flex items-center justify-center gap-2"
                     disabled={
                       createCustomerMutation.isPending ||
                       updateCustomerMutation.isPending ||
@@ -637,7 +637,7 @@ export function CustomerManagementPage() {
                     setShowDeleteDialog(false)
                     setSelectedCustomer(null)
                   }}
-                  className="flex-1 vw-btn-secondary"
+                  className="flex-1 vw-button-secondary"
                   disabled={deleteCustomerMutation.isPending}
                 >
                   Cancelar

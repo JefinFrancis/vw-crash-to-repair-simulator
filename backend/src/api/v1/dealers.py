@@ -17,6 +17,37 @@ router = APIRouter()
 logger = structlog.get_logger(__name__)
 
 
+@router.post("/", response_model=DealerResponse, status_code=status.HTTP_201_CREATED)
+async def create_dealer(
+    dealer_data: DealerCreate,
+    dealer_service: DealerServiceDep
+) -> DealerResponse:
+    """Create a new VW dealer."""
+    try:
+        logger.info("Creating dealer", name=dealer_data.name)
+        dealer = await dealer_service.create_dealer(dealer_data.model_dump())
+        logger.info("Successfully created dealer", dealer_id=str(dealer.id))
+        return dealer
+    except ValidationException as e:
+        logger.warning("Dealer creation validation error", error=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"error": "Validation Error", "message": str(e)}
+        )
+    except ServiceException as e:
+        logger.error("Dealer service error", error=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={"error": "Service Error", "message": str(e)}
+        )
+    except Exception as e:
+        logger.error("Unexpected error creating dealer", error=str(e), exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={"error": "Internal Server Error", "message": "Failed to create dealer"}
+        )
+
+
 @router.get("/", response_model=List[DealerResponse])
 async def list_dealers(
     dealer_service: DealerServiceDep,

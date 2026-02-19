@@ -51,3 +51,12 @@ class DatabaseConnectionError(VWApplicationError):
 class ValidationError(VWApplicationError):
     """Raised when data validation fails."""
     pass
+
+
+class NotFoundException(VWApplicationError):
+    """Raised when a requested resource is not found."""
+
+    def __init__(self, message: str, resource: str = None, id: str = None):
+        super().__init__(message)
+        self.resource = resource
+        self.id = id

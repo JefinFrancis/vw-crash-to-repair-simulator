@@ -6,6 +6,7 @@ export function WelcomePage() {
   const navigate = useNavigate()
   
   const handleStartExperience = () => {
+    window.scrollTo(0, 0)
     navigate('/home')
   }
   

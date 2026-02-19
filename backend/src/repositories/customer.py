@@ -29,6 +29,20 @@ class CustomerRepository(BaseRepository[Customer, CustomerCreate, CustomerUpdate
         """
         super().__init__(Customer, db)
 
+    async def get_by_unique_field(self, field_name: str, field_value: str) -> Optional[Customer]:
+        """Get customer by unique field (phone).
+
+        Args:
+            field_name: Field name to search ('phone')
+            field_value: Field value to search for
+
+        Returns:
+            Customer if found, None otherwise
+        """
+        if field_name == "phone":
+            return await self.get_by_phone(field_value)
+        return None
+
     async def get_by_phone(self, phone: str) -> Optional[Customer]:
         """Get customer by phone number.
 
@@ -43,7 +57,7 @@ class CustomerRepository(BaseRepository[Customer, CustomerCreate, CustomerUpdate
             .where(Customer.phone == phone)
             .options(selectinload(Customer.preferred_dealer))
         )
-        result = await self.db.execute(stmt)
+        result = await self.db_session.execute(stmt)
         return result.scalar_one_or_none()
 
     async def search_by_name(
@@ -70,7 +84,7 @@ class CustomerRepository(BaseRepository[Customer, CustomerCreate, CustomerUpdate
             .limit(limit)
             .order_by(Customer.name)
         )
-        result = await self.db.execute(stmt)
+        result = await self.db_session.execute(stmt)
         return list(result.scalars().all())
 
     async def get_with_preferred_dealer(self, customer_id: str) -> Optional[Customer]:
@@ -87,7 +101,7 @@ class CustomerRepository(BaseRepository[Customer, CustomerCreate, CustomerUpdate
             .where(Customer.id == customer_id)
             .options(selectinload(Customer.preferred_dealer))
         )
-        result = await self.db.execute(stmt)
+        result = await self.db_session.execute(stmt)
         return result.scalar_one_or_none()
 
     async def get_customers_by_dealer(
@@ -114,7 +128,7 @@ class CustomerRepository(BaseRepository[Customer, CustomerCreate, CustomerUpdate
             .limit(limit)
             .order_by(Customer.name)
         )
-        result = await self.db.execute(stmt)
+        result = await self.db_session.execute(stmt)
         return list(result.scalars().all())
 
     async def phone_exists(self, phone: str, exclude_id: Optional[str] = None) -> bool:
@@ -134,5 +148,5 @@ class CustomerRepository(BaseRepository[Customer, CustomerCreate, CustomerUpdate
         if exclude_id:
             stmt = stmt.where(Customer.id != exclude_id)
 
-        result = await self.db.execute(stmt)
+        result = await self.db_session.execute(stmt)
         return result.scalar_one_or_none() is not None

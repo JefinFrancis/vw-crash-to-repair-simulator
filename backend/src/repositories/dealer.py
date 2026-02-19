@@ -13,6 +13,9 @@ import re
 from sqlalchemy import select, and_, or_, func, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+# Import Dealer model
+from ..models.dealer import Dealer
+
 # Temporary placeholder until dealer schemas are created
 from typing import Dict, Any as DealerCreate, Any as DealerUpdate
 from .base import BaseRepository
@@ -29,6 +32,7 @@ class DealerRepository:
     """
 
     def __init__(self, db_session: AsyncSession):
+        self.model = Dealer
         self.db_session = db_session
 
     async def get_by_unique_field(self, field_name: str, field_value: str) -> Optional[Dealer]:

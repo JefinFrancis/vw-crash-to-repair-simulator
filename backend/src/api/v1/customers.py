@@ -13,12 +13,12 @@ from ...schemas.customer import (
     CustomerResponse,
 )
 from ...services.customer import CustomerService
-from ...exceptions import ValidationException, NotFoundException
+from ...utils.exceptions import ValidationException, NotFoundException
 from ..dependencies import get_customer_service
 
 logger = structlog.get_logger(__name__)
 
-router = APIRouter(prefix="/customers", tags=["customers"])
+router = APIRouter()
 
 # Type alias for cleaner dependency injection
 CustomerServiceDep = Annotated[CustomerService, Depends(get_customer_service)]

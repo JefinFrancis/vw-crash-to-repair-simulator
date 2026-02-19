@@ -13,7 +13,8 @@ class Part(BaseModel):
     
     # Part identification
     part_number = Column(String(50), unique=True, nullable=False, index=True)
-    name = Column(String(200), nullable=False, index=True)
+    name = Column(String(200), nullable=False, index=True)  # English name (from BeamNG)
+    name_pt = Column(String(200), nullable=True, index=True)  # Portuguese name (for UI)
     category = Column(String(50), nullable=True, index=True)
     
     # Compatibility

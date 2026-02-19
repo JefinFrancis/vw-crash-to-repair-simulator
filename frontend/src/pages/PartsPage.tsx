@@ -25,14 +25,23 @@ const formatCurrency = (value: string | number) => {
   }).format(num)
 }
 
+// Get display name: prefer Portuguese, fallback to English
+const getDisplayName = (part: Part) => part.name_pt || part.name
+
 const categoryLabels: Record<string, string> = {
-  body_exterior: 'Carroceria Externa',
-  body_interior: 'Interior',
-  mechanical: 'Mecânica',
-  electrical: 'Elétrica',
-  suspension: 'Suspensão',
+  engine: 'Motor',
+  transmission: 'Transmissao',
+  exhaust: 'Escapamento',
+  fuel_system: 'Combustivel',
+  cooling: 'Arrefecimento',
+  lighting: 'Iluminacao',
+  suspension: 'Suspensao',
+  steering: 'Direcao',
+  driveshaft: 'Transmissao/Eixo',
+  interior: 'Interior',
   glass: 'Vidros',
-  lighting: 'Iluminação',
+  body: 'Carroceria',
+  general: 'Geral',
 }
 
 const availabilityColors: Record<string, string> = {
@@ -40,6 +49,13 @@ const availabilityColors: Record<string, string> = {
   low_stock: 'bg-yellow-100 text-yellow-800',
   out_of_stock: 'bg-red-100 text-red-800',
   discontinued: 'bg-gray-100 text-gray-800',
+}
+
+const availabilityLabels: Record<string, string> = {
+  available: 'Em Estoque',
+  low_stock: 'Estoque Baixo',
+  out_of_stock: 'Sem Estoque',
+  discontinued: 'Descontinuado',
 }
 
 export function PartsPage() {
@@ -50,15 +66,16 @@ export function PartsPage() {
 
   const { data: parts = [], isLoading, error } = useQuery({
     queryKey: ['parts', selectedCategory],
-    queryFn: () => partService.list({ 
+    queryFn: () => partService.list({
       per_page: 100,
       category: selectedCategory || undefined
     }),
   })
 
-  // Filter parts based on search
+  // Filter parts based on search (search both English and Portuguese names)
   const filteredParts = parts.filter(part =>
     part.name.toLowerCase().includes(search.toLowerCase()) ||
+    (part.name_pt && part.name_pt.toLowerCase().includes(search.toLowerCase())) ||
     part.part_number.toLowerCase().includes(search.toLowerCase()) ||
     (part.description && part.description.toLowerCase().includes(search.toLowerCase()))
   )
@@ -86,10 +103,10 @@ export function PartsPage() {
           >
             <h1 className="text-3xl font-bold text-white flex items-center gap-3">
               <Package className="h-8 w-8" />
-              Catálogo de Peças VW
+              Catalogo de Pecas VW
             </h1>
             <p className="text-blue-200 mt-2">
-              Navegue e gerencie o inventário de peças genuínas Volkswagen
+              Consulte e gerencie o inventario de pecas genuinas Volkswagen
             </p>
           </motion.div>
         </div>
@@ -109,7 +126,7 @@ export function PartsPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-gray-900">{parts.length}</p>
-                <p className="text-sm text-gray-500">Total de Peças</p>
+                <p className="text-sm text-gray-500">Total de Pecas</p>
               </div>
             </div>
           </div>
@@ -142,7 +159,7 @@ export function PartsPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-gray-900">{formatCurrency(totalValue)}</p>
-                <p className="text-sm text-gray-500">Valor do Inventário</p>
+                <p className="text-sm text-gray-500">Valor Total</p>
               </div>
             </div>
           </div>
@@ -161,7 +178,7 @@ export function PartsPage() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
               <input
                 type="text"
-                placeholder="Buscar por nome ou número da peça..."
+                placeholder="Buscar por nome da peca ou numero..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-vw-blue focus:border-transparent"
@@ -197,17 +214,17 @@ export function PartsPage() {
           {isLoading ? (
             <div className="col-span-full py-12 text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-vw-blue mx-auto"></div>
-              <p className="text-gray-500 mt-3">Carregando peças...</p>
+              <p className="text-gray-500 mt-3">Carregando pecas...</p>
             </div>
           ) : error ? (
             <div className="col-span-full py-12 text-center text-red-500">
               <AlertTriangle className="h-12 w-12 mx-auto mb-3" />
-              <p>Erro ao carregar peças. Por favor, tente novamente.</p>
+              <p>Erro ao carregar pecas. Tente novamente.</p>
             </div>
           ) : filteredParts.length === 0 ? (
             <div className="col-span-full py-12 text-center">
               <Package className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-500">Nenhuma peça encontrada</p>
+              <p className="text-gray-500">Nenhuma peca encontrada</p>
             </div>
           ) : (
             filteredParts.map((part, index) => (
@@ -227,20 +244,17 @@ export function PartsPage() {
                         <Package className="h-5 w-5 text-vw-blue" />
                       </div>
                       <div>
-                        <h3 className="font-semibold text-gray-900 line-clamp-1">{part.name}</h3>
+                        <h3 className="font-semibold text-gray-900 line-clamp-1">{getDisplayName(part)}</h3>
                         <p className="text-sm text-gray-500 font-mono">{part.part_number}</p>
                       </div>
                     </div>
                     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${availabilityColors[part.availability_status || 'available']}`}>
-                      {part.availability_status === 'available' ? 'Em Estoque' : 
-                       part.availability_status === 'low_stock' ? 'Estoque Baixo' :
-                       part.availability_status === 'out_of_stock' ? 'Sem Estoque' : 
-                       part.availability_status}
+                      {availabilityLabels[part.availability_status || 'available'] || part.availability_status}
                     </span>
                   </div>
 
-                  {part.description && (
-                    <p className="text-sm text-gray-600 mb-3 line-clamp-2">{part.description}</p>
+                  {part.name_pt && part.name_pt !== part.name && (
+                    <p className="text-sm text-gray-500 mb-3 italic">{part.name}</p>
                   )}
 
                   <div className="flex items-center justify-between pt-3 border-t border-gray-100">
@@ -279,7 +293,7 @@ export function PartsPage() {
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
           >
-            Exibindo {filteredParts.length} de {parts.length} peças
+            Mostrando {filteredParts.length} de {parts.length} pecas
           </motion.div>
         )}
       </div>
@@ -298,7 +312,7 @@ export function PartsPage() {
               <div className="flex items-center justify-between p-6 border-b bg-vw-blue text-white">
                 <h2 className="text-xl font-bold flex items-center gap-2">
                   <Package className="h-6 w-6" />
-                  Detalhes da Peça
+                  Detalhes da Peca
                 </h2>
                 <button
                   onClick={() => setShowDetails(false)}
@@ -312,12 +326,15 @@ export function PartsPage() {
               <div className="p-6">
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-500 mb-1">Nome da Peça</label>
-                    <p className="text-lg font-semibold">{selectedPart.name}</p>
+                    <label className="block text-sm font-medium text-gray-500 mb-1">Nome da Peca</label>
+                    <p className="text-lg font-semibold">{getDisplayName(selectedPart)}</p>
+                    {selectedPart.name_pt && (
+                      <p className="text-sm text-gray-500 mt-1">EN: {selectedPart.name}</p>
+                    )}
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-500 mb-1">Número da Peça</label>
+                      <label className="block text-sm font-medium text-gray-500 mb-1">Numero da Peca</label>
                       <p className="font-mono text-gray-900">{selectedPart.part_number}</p>
                     </div>
                     <div>
@@ -325,19 +342,13 @@ export function PartsPage() {
                       <p className="text-gray-900">{categoryLabels[selectedPart.category || ''] || selectedPart.category}</p>
                     </div>
                   </div>
-                  {selectedPart.description && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-500 mb-1">Descrição</label>
-                      <p className="text-gray-700">{selectedPart.description}</p>
-                    </div>
-                  )}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-500 mb-1">Preço</label>
+                      <label className="block text-sm font-medium text-gray-500 mb-1">Preco</label>
                       <p className="text-2xl font-bold text-vw-blue">{formatCurrency(selectedPart.price_brl)}</p>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-500 mb-1">Tempo de Mão de Obra</label>
+                      <label className="block text-sm font-medium text-gray-500 mb-1">Tempo de Mao de Obra</label>
                       <p className="text-lg font-semibold">{selectedPart.labor_hours || '0'}h</p>
                     </div>
                   </div>
@@ -345,10 +356,7 @@ export function PartsPage() {
                     <div>
                       <label className="block text-sm font-medium text-gray-500 mb-1">Disponibilidade</label>
                       <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${availabilityColors[selectedPart.availability_status || 'available']}`}>
-                        {selectedPart.availability_status === 'available' ? 'Em Estoque' : 
-                         selectedPart.availability_status === 'low_stock' ? 'Estoque Baixo' :
-                         selectedPart.availability_status === 'out_of_stock' ? 'Sem Estoque' : 
-                         selectedPart.availability_status}
+                        {availabilityLabels[selectedPart.availability_status || 'available'] || selectedPart.availability_status}
                       </span>
                     </div>
                     <div>
@@ -363,7 +371,7 @@ export function PartsPage() {
               <div className="p-6 border-t bg-gray-50 flex justify-end">
                 <button
                   onClick={() => setShowDetails(false)}
-                  className="vw-btn-primary"
+                  className="vw-button-primary"
                 >
                   Fechar
                 </button>

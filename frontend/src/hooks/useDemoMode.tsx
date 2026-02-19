@@ -35,7 +35,7 @@ const DEMO_STEPS: DemoStep[] = [
     title: 'Collision Simulation',
     subtitle: 'Select vehicle and scenario',
     narrative: 'Choose a VW vehicle model and configure the type of collision you want to simulate using our BeamNG.drive simulator.',
-    path: '/simulation',
+    path: '/damage-reports',
     duration: 15,
     autoProgress: false
   },

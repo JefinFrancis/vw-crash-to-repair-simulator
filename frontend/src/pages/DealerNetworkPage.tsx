@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   MapPin,
   Phone,
@@ -14,12 +14,16 @@ import {
   Wrench,
   Car,
   Navigation,
-  Building2
+  Building2,
+  Plus,
+  X,
+  Loader2
 } from 'lucide-react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { useAppStore } from '../store/useAppStore'
 import { apiClient } from '../services/api'
+import { dealerService } from '../services/dealerService'
 
 // Brazilian states for filter
 const BRAZILIAN_STATES = [
@@ -81,6 +85,44 @@ export function DealerNetworkPage() {
   const [selectedServices, setSelectedServices] = useState<string[]>([])
   const [selectedDealer, setSelectedDealer] = useState<Dealer | null>(null)
   const [showFilters, setShowFilters] = useState(false)
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [dealerForm, setDealerForm] = useState({
+    name: '',
+    cnpj: '',
+    address: '',
+    city: '',
+    state: '',
+    postal_code: '',
+    phone: '',
+    email: '',
+  })
+
+  const queryClient = useQueryClient()
+
+  const createDealerMutation = useMutation({
+    mutationFn: (data: typeof dealerForm) => dealerService.create({
+      ...data,
+      email: data.email || undefined,
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dealers'] })
+      toast.success('Concessionária criada com sucesso!')
+      setShowCreateModal(false)
+      setDealerForm({ name: '', cnpj: '', address: '', city: '', state: '', postal_code: '', phone: '', email: '' })
+    },
+    onError: (error: any) => {
+      toast.error(error?.message || 'Erro ao criar concessionária')
+    },
+  })
+
+  const handleCreateDealer = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!dealerForm.name.trim() || !dealerForm.cnpj.trim() || !dealerForm.phone.trim()) {
+      toast.error('Preencha os campos obrigatórios')
+      return
+    }
+    createDealerMutation.mutate(dealerForm)
+  }
 
   // Fetch dealers
   const { data: dealersData, isLoading, error } = useQuery({
@@ -169,15 +211,18 @@ export function DealerNetworkPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
       {/* Header */}
-      <div className="bg-vw-blue text-white py-8">
+      <div className="bg-vw-blue text-white py-6">
         <div className="vw-container">
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
           >
-            <h1 className="text-4xl font-bold text-white mb-2">🏦 Rede de Concessionárias</h1>
-            <p className="text-blue-200">
-              Encontre a concessionária VW mais próxima para seu reparo
+            <h1 className="text-3xl font-bold text-white flex items-center gap-3">
+              <MapPin className="h-8 w-8" />
+              Rede de Concessionarias
+            </h1>
+            <p className="text-blue-200 mt-2">
+              Encontre a concessionaria VW mais proxima para seu reparo
             </p>
           </motion.div>
         </div>
@@ -248,6 +293,15 @@ export function DealerNetworkPage() {
             >
               <Filter className="h-5 w-5" />
               Filtros
+            </button>
+
+            {/* Add Dealer Button */}
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="vw-button-primary flex items-center gap-2"
+            >
+              <Plus className="h-5 w-5" />
+              Adicionar Concessionária
             </button>
           </div>
 
@@ -457,7 +511,7 @@ export function DealerNetworkPage() {
 
                   <button
                     onClick={handleProceedToAppointment}
-                    className="w-full vw-btn-primary flex items-center justify-center gap-2 mt-4"
+                    className="w-full vw-button-primary flex items-center justify-center gap-2 mt-4"
                   >
                     <Clock className="h-5 w-5" />
                     Agendar Reparo
@@ -468,7 +522,7 @@ export function DealerNetworkPage() {
                       href={`https://www.google.com/maps/dir/?api=1&destination=${selectedDealer.latitude},${selectedDealer.longitude}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="w-full vw-btn-outline flex items-center justify-center gap-2"
+                      className="w-full vw-button-secondary flex items-center justify-center gap-2"
                     >
                       <Navigation className="h-5 w-5" />
                       Abrir no Maps
@@ -514,6 +568,162 @@ export function DealerNetworkPage() {
           </div>
         </div>
       </div>
+
+      {/* Create Dealer Modal */}
+      <AnimatePresence>
+        {showCreateModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <motion.div
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-md"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+            >
+              <div className="flex items-center justify-between p-6 border-b">
+                <h2 className="text-xl font-bold text-vw-blue flex items-center gap-2">
+                  <Building2 className="h-6 w-6" />
+                  Nova Concessionária
+                </h2>
+                <button
+                  onClick={() => setShowCreateModal(false)}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  disabled={createDealerMutation.isPending}
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleCreateDealer} className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Nome <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={dealerForm.name}
+                    onChange={(e) => setDealerForm(prev => ({ ...prev, name: e.target.value }))}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-vw-blue focus:border-transparent"
+                    placeholder="Nome da concessionária"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    CNPJ <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={dealerForm.cnpj}
+                    onChange={(e) => setDealerForm(prev => ({ ...prev, cnpj: e.target.value }))}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-vw-blue focus:border-transparent"
+                    placeholder="00.000.000/0000-00"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Telefone <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="tel"
+                    value={dealerForm.phone}
+                    onChange={(e) => setDealerForm(prev => ({ ...prev, phone: e.target.value }))}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-vw-blue focus:border-transparent"
+                    placeholder="(11) 99999-9999"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Endereço</label>
+                  <input
+                    type="text"
+                    value={dealerForm.address}
+                    onChange={(e) => setDealerForm(prev => ({ ...prev, address: e.target.value }))}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-vw-blue focus:border-transparent"
+                    placeholder="Rua, número"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Cidade</label>
+                    <input
+                      type="text"
+                      value={dealerForm.city}
+                      onChange={(e) => setDealerForm(prev => ({ ...prev, city: e.target.value }))}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-vw-blue focus:border-transparent"
+                      placeholder="Cidade"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Estado</label>
+                    <select
+                      value={dealerForm.state}
+                      onChange={(e) => setDealerForm(prev => ({ ...prev, state: e.target.value }))}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-vw-blue focus:border-transparent"
+                    >
+                      <option value="">Selecione</option>
+                      {BRAZILIAN_STATES.map((s) => (
+                        <option key={s.code} value={s.code}>{s.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">CEP</label>
+                  <input
+                    type="text"
+                    value={dealerForm.postal_code}
+                    onChange={(e) => setDealerForm(prev => ({ ...prev, postal_code: e.target.value }))}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-vw-blue focus:border-transparent"
+                    placeholder="00000-000"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email (Opcional)</label>
+                  <input
+                    type="email"
+                    value={dealerForm.email}
+                    onChange={(e) => setDealerForm(prev => ({ ...prev, email: e.target.value }))}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-vw-blue focus:border-transparent"
+                    placeholder="email@concessionaria.com"
+                  />
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowCreateModal(false)}
+                    className="flex-1 vw-button-secondary"
+                    disabled={createDealerMutation.isPending}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 vw-button-primary flex items-center justify-center gap-2"
+                    disabled={createDealerMutation.isPending}
+                  >
+                    {createDealerMutation.isPending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Salvando...
+                      </>
+                    ) : (
+                      'Criar Concessionária'
+                    )}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

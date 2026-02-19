@@ -11,6 +11,7 @@ class PartBase(BaseModel):
     """Base part schema."""
     part_number: str = Field(..., min_length=1, max_length=50)
     name: str = Field(..., min_length=1, max_length=200)
+    name_pt: Optional[str] = Field(None, max_length=200)
     description: Optional[str] = None
     category: str = Field(..., max_length=50)
     price_brl: Decimal = Field(..., ge=0)
@@ -29,6 +30,7 @@ class PartUpdate(BaseModel):
     """Part update schema."""
     part_number: Optional[str] = Field(None, min_length=1, max_length=50)
     name: Optional[str] = Field(None, min_length=1, max_length=200)
+    name_pt: Optional[str] = Field(None, max_length=200)
     description: Optional[str] = None
     category: Optional[str] = Field(None, max_length=50)
     price_brl: Optional[Decimal] = Field(None, ge=0)

@@ -91,6 +91,7 @@ services:
       - ./backend:/app
       - ./backend/logs:/app/logs
       - ./data:/app/data
+      - ./VEHICLE_PARTS.csv:/app/VEHICLE_PARTS.csv:ro
     depends_on:
       postgres:
         condition: service_healthy

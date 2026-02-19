@@ -31,6 +31,28 @@ class DealerService(BaseService):
     def __init__(self, db_session: AsyncSession):
         super().__init__(db_session)
 
+    async def create_dealer(self, dealer_data: Dict[str, Any]) -> Dealer:
+        """
+        Create a new dealer.
+
+        Args:
+            dealer_data: Dealer creation data
+
+        Returns:
+            Created dealer instance
+        """
+        try:
+            dealer = Dealer(**dealer_data)
+            self.db_session.add(dealer)
+            await self.db_session.commit()
+            await self.db_session.refresh(dealer)
+            logger.info(f"Created dealer: {dealer.name}")
+            return dealer
+        except Exception as e:
+            await self.db_session.rollback()
+            logger.error(f"Error creating dealer: {str(e)}")
+            raise ServiceException(f"Failed to create dealer: {str(e)}")
+
     async def get_dealers(
         self,
         skip: int = 0,

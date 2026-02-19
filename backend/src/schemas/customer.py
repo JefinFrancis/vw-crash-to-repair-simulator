@@ -5,6 +5,7 @@ ensuring proper format for Brazilian phone numbers and CNPJ codes.
 """
 
 import re
+import uuid
 from typing import Optional
 from datetime import datetime
 from pydantic import BaseModel, Field, field_validator
@@ -148,13 +149,17 @@ class CustomerResponse(CustomerBase):
     Used in GET responses.
     """
 
-    id: str = Field(..., description="Customer UUID")
+    id: uuid.UUID = Field(..., description="Customer UUID")
     created_at: datetime = Field(..., description="Customer creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")
 
     class Config:
         """Pydantic configuration."""
         from_attributes = True  # Enable ORM mode for SQLAlchemy compatibility
+        json_encoders = {
+            uuid.UUID: lambda v: str(v),
+            datetime: lambda v: v.isoformat(),
+        }
 
 
 class CustomerListResponse(BaseModel):

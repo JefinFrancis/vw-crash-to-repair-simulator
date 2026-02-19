@@ -1,15 +1,17 @@
 """
 Database seeding script for VW crash-to-repair simulator.
 
-Seeds the PostgreSQL database with initial data from JSON files:
+Seeds the PostgreSQL database with initial data from JSON files and CSV:
 - VW vehicles catalog
-- VW parts catalog with Brazilian pricing
+- VW parts catalog with Brazilian pricing (from VEHICLE_PARTS.csv)
 - Brazilian VW dealer network
 """
 
 import asyncio
+import csv
 import json
 import logging
+import re
 from pathlib import Path
 from uuid import uuid4
 
@@ -36,6 +38,11 @@ if not DATA_PATH.exists():
 VEHICLES_FILE = DATA_PATH / "vehicles" / "vw_models.json"
 PARTS_FILE = DATA_PATH / "parts" / "vw_parts_catalog.json"
 DEALERS_FILE = DATA_PATH / "dealers" / "vw_brazil_dealers.json"
+
+# CSV parts file (root of the project)
+PARTS_CSV_FILE = Path(__file__).parent.parent / "VEHICLE_PARTS.csv"
+if not PARTS_CSV_FILE.exists():
+    PARTS_CSV_FILE = Path("/app") / "VEHICLE_PARTS.csv"
 
 # Database URL - Use environment variable if set, otherwise use Docker network hostname
 import os
@@ -84,56 +91,133 @@ async def seed_vehicles(session: AsyncSession, vehicles_data: dict) -> int:
             logger.info(f"Seeded vehicle: {vehicle_info.get('model_name', model_id)}")
             
         except Exception as e:
+            await session.rollback()
             logger.error(f"Error seeding vehicle {model_id}: {e}")
-    
+
+    return count
+
+
+def _parse_brl_price(price_str: str) -> float:
+    """Parse Brazilian Real price string like 'R$ 15.000,00' to float."""
+    cleaned = price_str.replace("R$", "").strip()
+    cleaned = cleaned.replace(".", "").replace(",", ".")
+    return float(cleaned)
+
+
+def _determine_category(name_en: str) -> str:
+    """Determine part category from English name."""
+    name_lower = name_en.lower()
+
+    if any(kw in name_lower for kw in ["engine", "turbocharger", "engine mount"]):
+        return "engine"
+    if any(kw in name_lower for kw in ["transmission", "shifter"]):
+        return "transmission"
+    if any(kw in name_lower for kw in ["exhaust"]):
+        return "exhaust"
+    if any(kw in name_lower for kw in ["fuel tank"]):
+        return "fuel_system"
+    if any(kw in name_lower for kw in ["radiator"]):
+        return "cooling"
+    if any(kw in name_lower for kw in ["headlight", "taillight", "drl"]):
+        return "lighting"
+    if any(kw in name_lower for kw in ["suspension", "strut", "shock", "spring", "sway bar", "spindle", "torsion"]):
+        return "suspension"
+    if any(kw in name_lower for kw in ["steering"]):
+        return "steering"
+    if any(kw in name_lower for kw in ["half shaft", "differential"]):
+        return "driveshaft"
+    if any(kw in name_lower for kw in ["seat", "interior", "parcel shelf"]):
+        return "interior"
+    if any(kw in name_lower for kw in ["windshield", "glass"]):
+        return "glass"
+    if any(kw in name_lower for kw in ["door", "bumper", "fender", "hood", "mirror", "tailgate", "undertray", "unibody"]):
+        return "body"
+    return "general"
+
+
+def _generate_part_number(index: int, category: str) -> str:
+    """Generate a VW-style part number based on category and index."""
+    category_prefixes = {
+        "engine": "ENG",
+        "transmission": "TRN",
+        "exhaust": "EXH",
+        "fuel_system": "FUL",
+        "cooling": "COL",
+        "lighting": "LGT",
+        "suspension": "SUS",
+        "steering": "STR",
+        "driveshaft": "DRV",
+        "interior": "INT",
+        "glass": "GLS",
+        "body": "BDY",
+        "general": "GEN",
+    }
+    prefix = category_prefixes.get(category, "GEN")
+    return f"TCR-{prefix}-{index:03d}"
+
+
+async def seed_parts_from_csv(session: AsyncSession) -> int:
+    """Seed parts table from VEHICLE_PARTS.csv, removing all existing parts first."""
+
+    # Remove all existing parts
+    await session.execute(text("DELETE FROM parts"))
+    await session.commit()
+    logger.info("Cleared all existing parts from database")
+
+    if not PARTS_CSV_FILE.exists():
+        logger.warning(f"Parts CSV file not found: {PARTS_CSV_FILE}")
+        return 0
+
+    count = 0
+    with open(PARTS_CSV_FILE, 'r', encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            try:
+                name_en = row["Part (English)"].strip()
+                name_pt = row["Peça (Português BR)"].strip()
+                price_str = row["Preço Estimado (BRL)"].strip()
+                labor_minutes_str = row.get("Tempo Estimado de Substituição (minutos)", "").strip()
+
+                price_brl = _parse_brl_price(price_str)
+                labor_hours = round(int(labor_minutes_str) / 60, 2) if labor_minutes_str else 1.0
+                category = _determine_category(name_en)
+                count += 1
+                part_number = _generate_part_number(count, category)
+
+                part_id = str(uuid4())
+                await session.execute(
+                    text("""
+                        INSERT INTO parts (id, part_number, name, name_pt, category, price_brl, labor_hours,
+                                          availability_status, supplier, description, created_at, updated_at)
+                        VALUES (:id, :part_number, :name, :name_pt, :category, :price_brl, :labor_hours,
+                               :availability_status, :supplier, :description, NOW(), NOW())
+                    """),
+                    {
+                        "id": part_id,
+                        "part_number": part_number,
+                        "name": name_en,
+                        "name_pt": name_pt,
+                        "category": category,
+                        "price_brl": price_brl,
+                        "labor_hours": labor_hours,
+                        "availability_status": "available",
+                        "supplier": "VW Parts Brazil",
+                        "description": name_pt,
+                    }
+                )
+                await session.commit()
+                logger.info(f"Seeded part: {part_number} - {name_en} / {name_pt}")
+
+            except Exception as e:
+                await session.rollback()
+                logger.error(f"Error seeding part from CSV row: {e}")
+
     return count
 
 
 async def seed_parts(session: AsyncSession, parts_data: dict) -> int:
-    """Seed parts table with VW parts catalog."""
-    count = 0
-    
-    for part_number, part_info in parts_data.get("parts", {}).items():
-        try:
-            # Check if part already exists
-            result = await session.execute(
-                text("SELECT id FROM parts WHERE part_number = :pn"),
-                {"pn": part_number}
-            )
-            if result.scalar():
-                logger.info(f"Part {part_number} already exists, skipping")
-                continue
-            
-            part_id = str(uuid4())
-            await session.execute(
-                text("""
-                    INSERT INTO parts (id, part_number, name, category, price_brl, labor_hours, 
-                                      availability_status, supplier, description, technical_specs, created_at, updated_at)
-                    VALUES (:id, :part_number, :name, :category, :price_brl, :labor_hours,
-                           :availability_status, :supplier, :description, :technical_specs, NOW(), NOW())
-                """),
-                {
-                    "id": part_id,
-                    "part_number": part_number,
-                    "name": part_info.get("name", "Unknown Part"),
-                    "category": part_info.get("category", "general"),
-                    "price_brl": part_info.get("price", 0),
-                    "labor_hours": part_info.get("labor_hours", 1.0),
-                    "availability_status": "available" if part_info.get("availability", {}).get("in_stock", True) else "out_of_stock",
-                    "supplier": part_info.get("availability", {}).get("supplier", "VW Parts Brazil"),
-                    "description": part_info.get("description", ""),
-                    "technical_specs": json.dumps(part_info.get("specifications", {}))
-                }
-            )
-            await session.commit()  # Commit each successful insert
-            count += 1
-            logger.info(f"Seeded part: {part_number} - {part_info.get('name', 'Unknown')}")
-            
-        except Exception as e:
-            await session.rollback()  # Rollback on error
-            logger.error(f"Error seeding part {part_number}: {e}")
-    
-    return count
+    """Seed parts table - delegates to CSV-based seeding."""
+    return await seed_parts_from_csv(session)
 
 
 async def seed_dealers(session: AsyncSession, dealers_data: dict) -> int:

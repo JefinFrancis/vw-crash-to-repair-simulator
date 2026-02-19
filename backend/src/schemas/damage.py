@@ -63,7 +63,8 @@ class ComponentDamage(BaseModel):
     """Individual component damage assessment."""
     
     component_id: str = Field(..., description="Component identifier")
-    component_name: str = Field(..., description="Component display name")
+    component_name: str = Field(..., description="Component display name (English)")
+    component_name_pt: Optional[str] = Field(None, description="Component display name (Portuguese)")
     part_number: Optional[str] = Field(None, description="VW part number")
     damage_type: DamageType = Field(..., description="Type of damage")
     severity: DamageSeverity = Field(..., description="Damage severity")

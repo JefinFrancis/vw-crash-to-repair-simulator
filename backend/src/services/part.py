@@ -426,32 +426,44 @@ class PartService(BaseService):
         except Exception as e:
             await self.handle_service_error(e, "Repair cost calculation")
 
+    async def get_part_by_name(self, name: str) -> Optional[Part]:
+        """Look up a part by its English name (exact, case-insensitive)."""
+        try:
+            result = await self.db_session.execute(
+                select(Part).where(Part.name.ilike(name))
+            )
+            return result.scalar_one_or_none()
+        except Exception as e:
+            logger.error(f"Error looking up part by name '{name}': {str(e)}")
+            return None
+
     async def _calculate_part_cost(self, damaged_part: Dict[str, Any]) -> Dict[str, Any]:
-        """Calculate cost for a single damaged part."""
+        """Calculate cost for a single damaged part using database prices."""
         try:
             part_number = damaged_part.get('part_number', '')
+            part_name = damaged_part.get('name', '')
             severity = damaged_part.get('severity', 'medium')
             quantity = damaged_part.get('quantity', 1)
-            
-            # Sample VW parts pricing in BRL
-            parts_catalog = {
-                '1J0807221': {'name': 'Front Bumper Cover', 'price': 850.00, 'category': 'body'},
-                '5G0809857': {'name': 'Front Fender', 'price': 1200.00, 'category': 'body'},
-                '5G0823300': {'name': 'Hood', 'price': 1500.00, 'category': 'body'},
-                '5G0941006': {'name': 'Headlight Assembly', 'price': 2200.00, 'category': 'lighting'},
-                '1K0199262': {'name': 'Engine Mount', 'price': 320.00, 'category': 'engine'},
-                '5G0601025': {'name': 'Alloy Wheel', 'price': 780.00, 'category': 'wheels'},
-                '5G0698151': {'name': 'Brake Disc', 'price': 180.00, 'category': 'brakes'}
-            }
-            
-            part_info = parts_catalog.get(part_number, {
-                'name': f'Generic Part {part_number}',
-                'price': 250.00,
-                'category': 'miscellaneous'
-            })
-            
-            base_price = Decimal(str(part_info['price']))
-            
+
+            # Look up part from database: first by part_number, then by English name
+            db_part = None
+            if part_number:
+                db_part = await self.get_part_by_number(part_number)
+            if not db_part and part_name:
+                db_part = await self.get_part_by_name(part_name)
+
+            if db_part:
+                base_price = db_part.price_brl
+                resolved_name = db_part.name_pt or db_part.name
+                resolved_category = db_part.category or 'general'
+                resolved_part_number = db_part.part_number
+            else:
+                base_price = Decimal('250.00')
+                resolved_name = part_name or f'Generic Part {part_number}'
+                resolved_category = 'miscellaneous'
+                resolved_part_number = part_number
+                logger.warning(f"Part not found in DB, using default price: {part_number or part_name}")
+
             # Adjust price based on severity
             severity_multipliers = {
                 'low': Decimal('0.3'),      # Minor repair/refinish
@@ -459,15 +471,15 @@ class PartService(BaseService):
                 'high': Decimal('1.2'),     # Premium part needed
                 'total': Decimal('1.5')     # Complete assembly
             }
-            
+
             multiplier = severity_multipliers.get(severity, Decimal('1.0'))
             unit_cost = base_price * multiplier
             total_cost = unit_cost * Decimal(str(quantity))
-            
+
             return {
-                'part_number': part_number,
-                'name': part_info['name'],
-                'category': part_info['category'],
+                'part_number': resolved_part_number,
+                'name': resolved_name,
+                'category': resolved_category,
                 'severity': severity,
                 'quantity': quantity,
                 'unit_cost': unit_cost,
@@ -475,7 +487,7 @@ class PartService(BaseService):
                 'unit_cost_formatted': self.format_currency_brl(float(unit_cost)),
                 'total_cost_formatted': self.format_currency_brl(float(total_cost))
             }
-            
+
         except Exception as e:
             logger.error(f"Error calculating part cost: {str(e)}")
             return {

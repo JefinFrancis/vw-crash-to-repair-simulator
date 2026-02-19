@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useQuery } from '@tanstack/react-query'
 import {
   FileText,
   Search,
@@ -16,10 +17,18 @@ import {
   ChevronRight,
   Calendar,
   Gauge,
-  ArrowLeft
+  ArrowLeft,
+  Mail,
+  FileCheck,
+  Package
 } from 'lucide-react'
 import { beamngService } from '../services/beamngService'
+import { partService } from '../services/partService'
+import { Part } from '../types'
 import toast from 'react-hot-toast'
+
+// Labor rate per hour (R$/h) - typical VW dealer rate in Brazil
+const LABOR_RATE_BRL = 150
 
 // Format currency in BRL
 const formatBRL = (value: number) => {
@@ -31,7 +40,10 @@ const formatBRL = (value: number) => {
 
 // Format date in Brazilian format, always as BRT (UTC-3)
 const formatDate = (dateString: string) => {
-  const date = new Date(dateString)
+  const normalized = dateString.endsWith('Z') || dateString.includes('+') || dateString.includes('-', 10)
+    ? dateString
+    : dateString + 'Z'
+  const date = new Date(normalized)
   const formatted = date.toLocaleString('pt-BR', {
     timeZone: 'America/Sao_Paulo',
     day: '2-digit',
@@ -66,6 +78,130 @@ const getSeverityFromDamage = (totalDamage: number): string => {
   return 'minor'
 }
 
+// BeamNG abbreviation expansions for part name matching
+const BEAMNG_ABBREV: Record<string, string> = {
+  'f': 'front', 'r': 'rear', 'l': 'left', 'fl': 'front left',
+  'fr': 'front right', 'rl': 'rear left', 'rr': 'rear right',
+  't': 'top', 'b': 'bottom',
+}
+
+/**
+ * Match a BeamNG part name (e.g. "etk800_fender_FL") to a DB part.
+ * Strategy:
+ * 1. Exact match (case-insensitive)
+ * 2. Keyword scoring: extract words from both names, count matches
+ */
+function findMatchingPart(beamngName: string, allParts: Part[]): Part | undefined {
+  const nameLower = beamngName.toLowerCase().trim()
+
+  // 1. Exact match by English name
+  const exact = allParts.find(p => p.name.toLowerCase() === nameLower)
+  if (exact) return exact
+
+  // 2. Extract keywords from BeamNG name
+  // Remove common model prefixes (e.g., "etk800_", "tcross_", "vivace_")
+  const withoutPrefix = nameLower.replace(/^[a-z]+\d*_/, '')
+  const rawTokens = withoutPrefix.split(/[_\s-]+/).filter(t => t.length > 0)
+
+  // Expand abbreviations
+  const beamngKeywords: string[] = []
+  for (const token of rawTokens) {
+    const expanded = BEAMNG_ABBREV[token]
+    if (expanded) {
+      beamngKeywords.push(...expanded.split(' '))
+    } else {
+      beamngKeywords.push(token)
+    }
+  }
+
+  if (beamngKeywords.length === 0) return undefined
+
+  // 3. Score each DB part
+  let bestMatch: Part | undefined
+  let bestScore = 0
+
+  for (const part of allParts) {
+    const partWords = part.name.toLowerCase().split(/[\s-]+/)
+    let score = 0
+    for (const kw of beamngKeywords) {
+      for (const pw of partWords) {
+        if (pw === kw) { score += 2; break }
+        if (pw.includes(kw) || kw.includes(pw)) { score += 1; break }
+      }
+    }
+    if (score > bestScore) {
+      bestScore = score
+      bestMatch = part
+    }
+  }
+
+  // Only return match if at least 2 points (one exact word match or two partial)
+  return bestScore >= 2 ? bestMatch : undefined
+}
+
+// Resolved part info after DB lookup
+interface ResolvedPart {
+  beamng_name: string
+  name_pt: string
+  name_en: string
+  price_brl: number
+  labor_hours: number
+  matched: boolean
+  damage?: number
+}
+
+/**
+ * Resolve a list of broken parts against the DB parts catalog.
+ */
+function resolveBrokenParts(
+  brokenParts: string[],
+  partDamage: Record<string, number>,
+  allParts: Part[]
+): ResolvedPart[] {
+  const resolved: ResolvedPart[] = []
+  const usedPartIds = new Set<string>()
+
+  for (const partName of brokenParts) {
+    const dbPart = findMatchingPart(partName, allParts)
+    const damage = partDamage[partName] ?? undefined
+
+    if (dbPart && !usedPartIds.has(dbPart.id)) {
+      usedPartIds.add(dbPart.id)
+      resolved.push({
+        beamng_name: partName,
+        name_pt: dbPart.name_pt || dbPart.name,
+        name_en: dbPart.name,
+        price_brl: parseFloat(dbPart.price_brl) || 0,
+        labor_hours: parseFloat(dbPart.labor_hours || '0') || 0,
+        matched: true,
+        damage,
+      })
+    } else {
+      resolved.push({
+        beamng_name: partName,
+        name_pt: partName,
+        name_en: partName,
+        price_brl: 0,
+        labor_hours: 0,
+        matched: false,
+        damage,
+      })
+    }
+  }
+
+  return resolved
+}
+
+/**
+ * Calculate crash maintenance cost from resolved parts.
+ */
+function calculateCrashCost(resolvedParts: ResolvedPart[]) {
+  const partsCost = resolvedParts.reduce((sum, p) => sum + p.price_brl, 0)
+  const totalLaborHours = resolvedParts.reduce((sum, p) => sum + p.labor_hours, 0)
+  const laborCost = totalLaborHours * LABOR_RATE_BRL
+  return { partsCost, laborCost, totalLaborHours, total: partsCost + laborCost }
+}
+
 // Crash item interface
 interface CrashItem {
   crash_id: string
@@ -94,6 +230,13 @@ export function DamageReportsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedCrash, setSelectedCrash] = useState<CrashItem | null>(null)
+
+  // Fetch all parts from DB for price/name lookups
+  const { data: allParts = [] } = useQuery({
+    queryKey: ['parts-all'],
+    queryFn: () => partService.list({ per_page: 200 }),
+    staleTime: 5 * 60 * 1000,
+  })
 
   // Fetch ALL crashes from API
   useEffect(() => {
@@ -130,13 +273,24 @@ export function DamageReportsPage() {
     crash.crash_id?.toLowerCase().includes(search.toLowerCase())
   )
 
-  // Stats
+  // Calculate stats using DB prices
   const totalReports = crashes.length
-  const severeCount = crashes.filter(c => getSeverityFromDamage(c.damage.total_damage) === 'severe' || getSeverityFromDamage(c.damage.total_damage) === 'total_loss').length
-  const totalDamageValue = crashes.reduce((sum, c) => {
-    const partsCount = c.damage.broken_parts_count || 0
-    return sum + (partsCount * 300) // Estimate R$300 per broken part
-  }, 0)
+  const severeCount = crashes.filter(c => {
+    const s = getSeverityFromDamage(c.damage.total_damage)
+    return s === 'severe' || s === 'total_loss'
+  }).length
+  const totalDamageValue = useMemo(() => {
+    if (allParts.length === 0) return 0
+    return crashes.reduce((sum, c) => {
+      const resolved = resolveBrokenParts(
+        c.damage.broken_parts || [],
+        c.damage.part_damage || {},
+        allParts
+      )
+      const { total } = calculateCrashCost(resolved)
+      return sum + total
+    }, 0)
+  }, [crashes, allParts])
   const uniqueVehicles = new Set(crashes.map(c => c.vehicle?.name)).size
 
   const viewCrashDetails = async (crash: CrashItem) => {
@@ -150,11 +304,29 @@ export function DamageReportsPage() {
 
   const backToList = () => setSelectedCrash(null)
 
-  // Detail view
+  // ============================================================================
+  // DETAIL VIEW
+  // ============================================================================
   if (selectedCrash) {
     const severity = getSeverityFromDamage(selectedCrash.damage.total_damage)
     const partDamage = selectedCrash.damage.part_damage || {}
-    const damagedParts = Object.entries(partDamage)
+    const brokenParts = selectedCrash.damage.broken_parts || []
+
+    // If broken_parts is empty, fall back to part_damage keys with damage > 0.5
+    const effectiveBrokenParts = brokenParts.length > 0
+      ? brokenParts
+      : Object.entries(partDamage)
+          .filter(([_, dmg]) => dmg > 0.5)
+          .sort(([_, a], [__, b]) => b - a)
+          .map(([name]) => name)
+
+    // Resolve parts against DB
+    const resolvedParts = resolveBrokenParts(effectiveBrokenParts, partDamage, allParts)
+    const { partsCost, laborCost, totalLaborHours, total } = calculateCrashCost(resolvedParts)
+    const matchedCount = resolvedParts.filter(p => p.matched).length
+
+    // Also show all parts with any damage from part_damage (for comprehensive view)
+    const allDamagedParts = Object.entries(partDamage)
       .filter(([_, dmg]) => dmg > 0.01)
       .sort(([_, a], [__, b]) => b - a)
 
@@ -174,7 +346,7 @@ export function DamageReportsPage() {
               <FileText className="h-7 w-7" />
               Detalhes do Sinistro
             </h1>
-            <p className="text-blue-200 mt-1">
+            <p className="text-white/70 mt-1">
               ID: {selectedCrash.crash_id}
             </p>
           </div>
@@ -190,7 +362,7 @@ export function DamageReportsPage() {
                 </div>
                 <div>
                   <p className="font-bold text-gray-900">{selectedCrash.vehicle?.brand} {selectedCrash.vehicle?.name}</p>
-                  <p className="text-sm text-gray-500">Veículo</p>
+                  <p className="text-sm text-gray-500">Veiculo</p>
                 </div>
               </div>
             </div>
@@ -229,52 +401,165 @@ export function DamageReportsPage() {
             </div>
           </div>
 
-          {/* Broken Parts */}
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mb-6">
-            <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-red-500" />
-              Peças Danificadas ({selectedCrash.damage.broken_parts_count})
-            </h2>
-            <div className="flex flex-wrap gap-2">
-              {selectedCrash.damage.broken_parts?.map((part, index) => (
-                <span key={index} className="px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm">
-                  {part}
-                </span>
-              ))}
-            </div>
-          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Left: Damage details (2 cols) */}
+            <div className="lg:col-span-2">
+              <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+                <h2 className="text-lg font-bold text-gray-900 mb-1 flex items-center gap-2">
+                  <Package className="h-5 w-5 text-vw-blue" />
+                  Pecas Danificadas ({resolvedParts.length})
+                </h2>
+                <p className="text-sm text-gray-500 mb-4">
+                  {matchedCount} de {resolvedParts.length} pecas identificadas no catalogo
+                </p>
 
-          {/* Part Damage Details */}
-          {damagedParts.length > 0 && (
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-              <h2 className="text-lg font-bold text-gray-900 mb-4">
-                Detalhamento de Danos
-              </h2>
-              <div className="space-y-3">
-                {damagedParts.slice(0, 15).map(([partName, damage], index) => (
-                  <div key={index} className="flex items-center gap-4">
-                    <div className="flex-1">
-                      <p className="font-medium text-gray-900">{partName}</p>
+                {/* Table header */}
+                <div className="grid grid-cols-12 gap-4 text-sm font-semibold text-gray-500 border-b border-gray-200 pb-2 mb-3">
+                  <div className="col-span-1"></div>
+                  <div className="col-span-5">Peca</div>
+                  <div className="col-span-3">Severidade</div>
+                  <div className="col-span-3 text-right">Valor</div>
+                </div>
+                <div className="space-y-1">
+                  {resolvedParts.length > 0 ? (
+                    resolvedParts.map((part, index) => {
+                      const partSeverity = part.damage != null
+                        ? (part.damage >= 0.8 ? 'total_loss' : part.damage >= 0.5 ? 'severe' : part.damage >= 0.2 ? 'moderate' : 'minor')
+                        : severity
+                      return (
+                        <div key={index} className="grid grid-cols-12 gap-4 items-center py-2 border-b border-gray-50 last:border-0">
+                          <div className="col-span-1">
+                            {part.matched ? (
+                              <CheckCircle className="h-4 w-4 text-green-500" />
+                            ) : (
+                              <AlertTriangle className="h-4 w-4 text-amber-400" />
+                            )}
+                          </div>
+                          <div className="col-span-5">
+                            <p className="font-medium text-gray-900 text-sm">{part.name_pt}</p>
+                            {part.matched && part.name_pt !== part.name_en && (
+                              <p className="text-xs text-gray-400 italic">{part.name_en}</p>
+                            )}
+                            {!part.matched && (
+                              <p className="text-xs text-amber-500">Nao catalogada</p>
+                            )}
+                          </div>
+                          <div className="col-span-3">
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${severityColors[partSeverity]}`}>
+                              {severityLabels[partSeverity]}
+                            </span>
+                          </div>
+                          <div className="col-span-3 text-right">
+                            {part.matched ? (
+                              <span className="font-semibold text-gray-900 text-sm">{formatBRL(part.price_brl)}</span>
+                            ) : (
+                              <span className="text-sm text-gray-400">--</span>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })
+                  ) : (
+                    <div className="py-8 text-center text-gray-400">
+                      <Package className="h-8 w-8 mx-auto mb-2" />
+                      <p>Nenhuma peca danificada identificada</p>
                     </div>
-                    <div className="w-48 bg-gray-200 rounded-full h-2">
-                      <div
-                        className={`h-2 rounded-full ${damage >= 0.8 ? 'bg-red-500' : damage >= 0.5 ? 'bg-orange-500' : damage >= 0.2 ? 'bg-yellow-500' : 'bg-green-500'}`}
-                        style={{ width: `${damage * 100}%` }}
-                      />
+                  )}
+                </div>
+
+                {/* All parts with damage (from part_damage) */}
+                {allDamagedParts.length > 0 && allDamagedParts.length !== resolvedParts.length && (
+                  <div className="mt-6 pt-4 border-t border-gray-200">
+                    <h3 className="text-sm font-semibold text-gray-500 mb-3">
+                      Todos os componentes com dano ({allDamagedParts.length})
+                    </h3>
+                    <div className="space-y-1">
+                      {allDamagedParts.slice(0, 20).map(([partName, damage], index) => {
+                        const dbPart = findMatchingPart(partName, allParts)
+                        const displayName = dbPart ? (dbPart.name_pt || dbPart.name) : partName
+                        const partSeverity = damage >= 0.8 ? 'total_loss' : damage >= 0.5 ? 'severe' : damage >= 0.2 ? 'moderate' : 'minor'
+                        return (
+                          <div key={index} className="flex items-center justify-between py-1.5 text-sm">
+                            <div className="flex items-center gap-2">
+                              <div className="w-16 bg-gray-200 rounded-full h-1.5">
+                                <div
+                                  className={`h-1.5 rounded-full ${damage >= 0.8 ? 'bg-red-500' : damage >= 0.5 ? 'bg-orange-500' : damage >= 0.2 ? 'bg-yellow-500' : 'bg-green-500'}`}
+                                  style={{ width: `${Math.min(damage * 100, 100)}%` }}
+                                />
+                              </div>
+                              <span className="text-gray-700">{displayName}</span>
+                            </div>
+                            <span className={`text-xs font-medium ${severityColors[partSeverity].split(' ')[1]}`}>
+                              {(damage * 100).toFixed(0)}%
+                            </span>
+                          </div>
+                        )
+                      })}
+                      {allDamagedParts.length > 20 && (
+                        <p className="text-xs text-gray-400 pt-2">
+                          +{allDamagedParts.length - 20} componentes adicionais
+                        </p>
+                      )}
                     </div>
-                    <span className={`text-sm font-bold w-16 text-right ${damage >= 0.8 ? 'text-red-600' : damage >= 0.5 ? 'text-orange-600' : damage >= 0.2 ? 'text-yellow-600' : 'text-green-600'}`}>
-                      {(damage * 100).toFixed(0)}%
-                    </span>
                   </div>
-                ))}
-                {damagedParts.length > 15 && (
-                  <p className="text-sm text-gray-500 mt-2">
-                    ... e mais {damagedParts.length - 15} peças
-                  </p>
                 )}
               </div>
             </div>
-          )}
+
+            {/* Right: Maintenance cost summary */}
+            <div className="lg:col-span-1">
+              <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 sticky top-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <DollarSign className="h-5 w-5 text-green-600" />
+                  <h2 className="text-lg font-bold text-gray-900">Valor da Manutencao</h2>
+                </div>
+                <p className="text-sm text-gray-500 mb-4">
+                  Estimativa baseada em {matchedCount} pecas identificadas no catalogo VW.
+                  {resolvedParts.length > matchedCount && (
+                    <span className="text-amber-600"> {resolvedParts.length - matchedCount} pecas nao catalogadas.</span>
+                  )}
+                </p>
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                  <p className="text-sm text-green-700 mb-1">Custo estimado total</p>
+                  <p className="text-3xl font-bold text-green-700">
+                    {formatBRL(total)}
+                  </p>
+                </div>
+                <div className="space-y-2 text-sm text-gray-600">
+                  <div className="flex justify-between">
+                    <span>Pecas ({matchedCount}x)</span>
+                    <span className="font-medium">{formatBRL(partsCost)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Mao de obra ({totalLaborHours.toFixed(1)}h)</span>
+                    <span className="font-medium">{formatBRL(laborCost)}</span>
+                  </div>
+                  <div className="border-t border-gray-200 pt-2 flex justify-between font-bold text-gray-900">
+                    <span>Total</span>
+                    <span>{formatBRL(total)}</span>
+                  </div>
+                </div>
+
+                {/* Action buttons */}
+                <div className="mt-6 space-y-2">
+                  <button
+                    onClick={() => toast.success('Agendamento em breve!')}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-vw-blue text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    <Calendar className="h-4 w-4" />
+                    Agendar Manutencao
+                  </button>
+                  <button
+                    onClick={() => toast.success('Lembrete enviado!')}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    <Mail className="h-4 w-4" />
+                    Enviar Lembrete
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     )
@@ -286,12 +571,15 @@ export function DamageReportsPage() {
       <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="h-12 w-12 animate-spin text-vw-blue mx-auto mb-4" />
-          <p className="text-gray-600">Carregando relatórios...</p>
+          <p className="text-gray-600">Carregando relatorios...</p>
         </div>
       </div>
     )
   }
 
+  // ============================================================================
+  // LIST VIEW
+  // ============================================================================
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
       {/* Header */}
@@ -303,10 +591,10 @@ export function DamageReportsPage() {
           >
             <h1 className="text-3xl font-bold text-white flex items-center gap-3">
               <FileText className="h-8 w-8" />
-              Relatórios de Sinistros
+              Relatorios de Sinistros
             </h1>
             <p className="text-blue-200 mt-2">
-              Todos os sinistros registrados de todos os veículos
+              Todos os sinistros registrados de todos os veiculos
             </p>
           </motion.div>
         </div>
@@ -348,7 +636,7 @@ export function DamageReportsPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-gray-900">{uniqueVehicles}</p>
-                <p className="text-sm text-gray-500">Veículos Únicos</p>
+                <p className="text-sm text-gray-500">Veiculos Unicos</p>
               </div>
             </div>
           </div>
@@ -377,7 +665,7 @@ export function DamageReportsPage() {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
             <input
               type="text"
-              placeholder="Buscar por veículo ou ID do sinistro..."
+              placeholder="Buscar por veiculo ou ID do sinistro..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-vw-blue focus:border-transparent"
@@ -387,7 +675,7 @@ export function DamageReportsPage() {
           {/* Refresh Button */}
           <button
             onClick={refreshCrashes}
-            className="vw-btn-secondary flex items-center gap-2"
+            className="vw-button-primary flex items-center gap-2"
           >
             <RefreshCw className="h-5 w-5" />
             Atualizar
@@ -404,12 +692,12 @@ export function DamageReportsPage() {
           {/* Table Header */}
           <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
             <div className="grid grid-cols-12 gap-4 text-sm font-semibold text-gray-600">
-              <div className="col-span-3">Veículo</div>
+              <div className="col-span-2">Veiculo</div>
               <div className="col-span-2">Severidade</div>
-              <div className="col-span-2">Dano Total</div>
-              <div className="col-span-2">Peças Danificadas</div>
               <div className="col-span-2">Data</div>
-              <div className="col-span-1 text-right">Ações</div>
+              <div className="col-span-1">Pecas</div>
+              <div className="col-span-2">Valor Manutencao</div>
+              <div className="col-span-3 text-right">Acoes</div>
             </div>
           </div>
 
@@ -423,8 +711,8 @@ export function DamageReportsPage() {
                       <Car className="h-12 w-12 text-green-600" />
                     </div>
                     <h3 className="text-2xl font-bold text-gray-800 mb-3">Nenhum sinistro ainda</h3>
-                    <p className="text-lg text-gray-500 mb-2">🚗 Ainda dirigindo por aí...</p>
-                    <p className="text-sm text-gray-400">Os sinistros aparecerão aqui automaticamente quando detectados pelo simulador BeamNG.drive</p>
+                    <p className="text-lg text-gray-500 mb-2">Ainda dirigindo por ai...</p>
+                    <p className="text-sm text-gray-400">Os sinistros aparecerao aqui automaticamente quando detectados pelo simulador BeamNG.drive</p>
                   </div>
                 ) : (
                   <div>
@@ -435,7 +723,15 @@ export function DamageReportsPage() {
               </div>
             ) : (
               filteredCrashes.map((crash, index) => {
-                const severity = getSeverityFromDamage(crash.damage.total_damage)
+                const crashSeverity = getSeverityFromDamage(crash.damage.total_damage)
+                // Calculate real cost from DB
+                const resolved = resolveBrokenParts(
+                  crash.damage.broken_parts || [],
+                  crash.damage.part_damage || {},
+                  allParts
+                )
+                const { total: crashTotal } = calculateCrashCost(resolved)
+
                 return (
                   <motion.div
                     key={crash.crash_id}
@@ -447,12 +743,12 @@ export function DamageReportsPage() {
                   >
                     <div className="grid grid-cols-12 gap-4 items-center">
                       {/* Vehicle */}
-                      <div className="col-span-3 flex items-center gap-3">
-                        <div className="w-10 h-10 bg-vw-blue rounded-lg flex items-center justify-center">
+                      <div className="col-span-2 flex items-center gap-3">
+                        <div className="w-10 h-10 bg-vw-blue rounded-lg flex items-center justify-center flex-shrink-0">
                           <Car className="h-5 w-5 text-white" />
                         </div>
-                        <div>
-                          <span className="font-semibold text-gray-900 block">
+                        <div className="min-w-0">
+                          <span className="font-semibold text-gray-900 block truncate">
                             {crash.vehicle?.brand} {crash.vehicle?.name}
                           </span>
                           <span className="text-xs text-gray-500 font-mono">
@@ -463,22 +759,10 @@ export function DamageReportsPage() {
 
                       {/* Severity */}
                       <div className="col-span-2">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${severityColors[severity]}`}>
-                          {(severity === 'severe' || severity === 'total_loss') && <AlertTriangle className="h-3 w-3 mr-1" />}
-                          {severityLabels[severity]}
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${severityColors[crashSeverity]}`}>
+                          {(crashSeverity === 'severe' || crashSeverity === 'total_loss') && <AlertTriangle className="h-3 w-3 mr-1" />}
+                          {severityLabels[crashSeverity]}
                         </span>
-                      </div>
-
-                      {/* Total Damage */}
-                      <div className="col-span-2">
-                        <span className={`font-bold ${crash.damage.total_damage >= 0.8 ? 'text-red-600' : crash.damage.total_damage >= 0.5 ? 'text-orange-600' : 'text-gray-900'}`}>
-                          {(crash.damage.total_damage * 100).toFixed(0)}%
-                        </span>
-                      </div>
-
-                      {/* Broken Parts */}
-                      <div className="col-span-2 text-gray-600">
-                        {crash.damage.broken_parts_count} peças
                       </div>
 
                       {/* Date */}
@@ -486,9 +770,48 @@ export function DamageReportsPage() {
                         {formatDate(crash.received_at)}
                       </div>
 
+                      {/* Broken Parts */}
+                      <div className="col-span-1 text-gray-600">
+                        {crash.damage.broken_parts_count} pecas
+                      </div>
+
+                      {/* Maintenance Cost - DB-driven */}
+                      <div className="col-span-2">
+                        <span className="font-bold text-green-700">
+                          {crashTotal > 0 ? formatBRL(crashTotal) : '--'}
+                        </span>
+                      </div>
+
                       {/* Actions */}
-                      <div className="col-span-1 flex justify-end">
-                        <ChevronRight className="h-5 w-5 text-gray-400" />
+                      <div className="col-span-3 flex items-center justify-end gap-2">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); toast.success('Agendamento em breve!') }}
+                          className="p-1.5 rounded-md border border-blue-200 bg-white hover:bg-blue-50 text-blue-600 transition-colors"
+                          title="Agendar manutencao"
+                        >
+                          <Calendar className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); toast.success('Lembrete enviado!') }}
+                          className="p-1.5 rounded-md border border-amber-200 bg-white hover:bg-amber-50 text-amber-600 transition-colors"
+                          title="Enviar lembrete"
+                        >
+                          <Mail className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); toast.success('Contrato aceito!') }}
+                          className="p-1.5 rounded-md border border-green-200 bg-white hover:bg-green-50 text-green-600 transition-colors"
+                          title="Aceite de contrato"
+                        >
+                          <FileCheck className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); viewCrashDetails(crash) }}
+                          className="p-1.5 rounded-md border border-gray-200 bg-white hover:bg-gray-100 text-gray-500 transition-colors"
+                          title="Ver detalhes"
+                        >
+                          <ChevronRight className="h-5 w-5" />
+                        </button>
                       </div>
                     </div>
                   </motion.div>

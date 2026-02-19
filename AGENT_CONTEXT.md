@@ -2,7 +2,7 @@
 
 > **For AI Agents**: Read this file at the start of every session. It contains the current project state, active workstreams, and coordination rules.
 
-**Last Updated**: 2026-01-30
+**Last Updated**: 2026-02-19
 **Repository**: github.com/JefinFrancis/vw-crash-to-repair-simulator
 
 ---
@@ -49,14 +49,14 @@ A full-stack VW crash-to-repair simulator that integrates with BeamNG.drive to d
 
 | Component | Owner | Files | Notes |
 |-----------|-------|-------|-------|
-| Landing Page | Unassigned | `pages/LandingPage.tsx` | Hero, workflow overview |
-| Simulation Flow | Unassigned | `pages/SimulationPage.tsx` | BeamNG connection, crash scenarios |
-| Analysis View | Unassigned | `pages/AnalysisPage.tsx` | AI analysis progress |
-| Results Display | Unassigned | `pages/ResultsPage.tsx` | Damage breakdown, estimates |
+| Landing Page | Unassigned | `pages/LandingPage.tsx` | Dashboard with stats and navigation |
+| Damage Reports | Unassigned | `pages/DamageReportsPage.tsx` | Crash list with DB-driven costs, detail view with per-part breakdown |
+| Results Display | Unassigned | `pages/ResultsPage.tsx` | Repair estimate results |
 | Appointment Booking | Unassigned | `pages/AppointmentPage.tsx` | Multi-step wizard |
 | Vehicle Management | Unassigned | `pages/VehicleManagementPage.tsx` | CRUD interface |
-| Dealer Network | Unassigned | `pages/DealerNetworkPage.tsx` | Map and list views |
-| Parts Catalog | Unassigned | `pages/PartsPage.tsx` | Catalog browser |
+| Customer Management | Unassigned | `pages/CustomerManagementPage.tsx` | Customer list with create modal |
+| Dealer Network | Unassigned | `pages/DealerNetworkPage.tsx` | Dealer list with create modal |
+| Parts Catalog | Unassigned | `pages/PartsPage.tsx` | Catalog browser with create modal |
 
 ### BeamNG Mod (`/beamng-mod/`)
 
@@ -115,6 +115,11 @@ When you start working on a file, add it here with your name and date:
 | 2026-01-30 | Jefin | Built and pushed Docker images to Artifact Registry | `backend:latest`, `frontend:latest` |
 | 2026-01-30 | Jefin | Fixed database config for Cloud Run env vars | `backend/src/config.py` |
 | 2026-01-30 | Jefin | Deployed dev environment to Cloud Run | All infrastructure live |
+| 2026-02-19 | Valmor | Game reporting flow: damage reports list with DB-driven pricing, action buttons, BRT timezone fix | `frontend/src/pages/DamageReportsPage.tsx` |
+| 2026-02-19 | Valmor | Auto-seed parts from CSV on startup (51 VW T-Cross parts) | `backend/src/database.py`, `backend/src/main.py`, `docker-compose.yml` |
+| 2026-02-19 | Valmor | Added create functionality for dealers, parts, customers | Backend API + frontend modals |
+| 2026-02-19 | Valmor | Customer management page and /customers route | `frontend/src/pages/CustomerManagementPage.tsx`, `AppRouter.tsx` |
+| 2026-02-19 | Valmor | Updated documentation to reflect current state | `README.md`, `MIGRATION_STATUS.md`, `DEVELOPER_GUIDE.md`, `PROGRESS.md`, `AGENT_CONTEXT.md` |
 
 ---
 
@@ -159,7 +164,13 @@ Critical areas where changes affect multiple components:
 - **Terraform**: `terraform/environments/*.tfvars` - Service URLs
 - **Rule**: When deploying, update BeamNG mod config to point to correct Cloud Run URL
 
-### 5. Docker Port Configuration
+### 5. Parts Catalog Auto-Seed
+- **CSV Source**: `VEHICLE_PARTS.csv` (project root, mounted into Docker)
+- **Backend**: `database.py` → `seed_parts_if_empty()` called on startup
+- **Frontend**: `DamageReportsPage.tsx` fetches parts via `partService.list()` for DB-driven pricing
+- **Rule**: If parts schema changes, update CSV headers and `seed_parts_if_empty()` parser
+
+### 6. Docker Port Configuration
 - **Backend/Frontend Dockerfiles**: Must use port `8080` for Cloud Run
 - **Local docker-compose**: Maps to ports `8000` and `3000`
 - **Rule**: Cloud Run requires port 8080; local dev uses standard ports

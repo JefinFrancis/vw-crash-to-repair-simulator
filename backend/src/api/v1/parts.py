@@ -185,6 +185,35 @@ async def get_part_categories(
         )
 
 
+@router.get("/by-name/{part_name:path}", response_model=PartResponse)
+async def get_part_by_name(
+    part_name: str,
+    part_service: PartServiceDep
+) -> PartResponse:
+    """
+    Get a specific part by its English name (as sent by BeamNG Drive).
+
+    Returns the part with both English and Portuguese names for UI display.
+    """
+    try:
+        logger.info("Looking up part by English name", part_name=part_name)
+        parts = await part_service.get_parts(name=part_name, limit=1)
+        if not parts:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Part not found: {part_name}"
+            )
+        return parts[0]
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Error looking up part by name", part_name=part_name, error=str(e), exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve part: {str(e)}"
+        )
+
+
 @router.get("/{part_id}", response_model=PartResponse)
 async def get_part(
     part_id: uuid.UUID,
