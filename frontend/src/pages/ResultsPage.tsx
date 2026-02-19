@@ -17,7 +17,9 @@ import {
   Zap,
   ChevronRight,
   Loader2,
-  FileText
+  FileText,
+  Calendar,
+  Clock
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAppStore } from '../store/useAppStore'
@@ -33,17 +35,25 @@ const formatBRL = (value: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
 
 // Format date in BRT
-const formatDate = (dateString: string) => {
+const parseDate = (dateString: string) => {
   const normalized =
     dateString.endsWith('Z') || dateString.includes('+') || dateString.includes('-', 10)
       ? dateString
       : dateString + 'Z'
-  return new Date(normalized).toLocaleString('pt-BR', {
+  return new Date(normalized)
+}
+
+const formatDateOnly = (dateString: string) =>
+  parseDate(dateString).toLocaleDateString('pt-BR', {
     timeZone: 'America/Sao_Paulo',
     day: '2-digit', month: '2-digit', year: 'numeric',
+  })
+
+const formatTimeOnly = (dateString: string) =>
+  parseDate(dateString).toLocaleTimeString('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
     hour: '2-digit', minute: '2-digit', hour12: false,
-  }) + ' BRT'
-}
+  })
 
 const severityColors: Record<string, string> = {
   minor: 'bg-green-100 text-green-800',
@@ -59,11 +69,24 @@ const severityLabels: Record<string, string> = {
   total_loss: 'Perda Total',
 }
 
+// Total parts in the vehicle (from VEHICLE_PARTS.csv)
+const TOTAL_VEHICLE_PARTS = 51
+
 const getSeverityFromDamage = (totalDamage: number): string => {
-  if (totalDamage >= 0.8) return 'total_loss'
   if (totalDamage >= 0.5) return 'severe'
   if (totalDamage >= 0.2) return 'moderate'
   return 'minor'
+}
+
+// Compute real total damage: sum of part damages / total vehicle parts
+function computeTotalDamage(damage: CrashItem['damage']): number {
+  const partsList = damage.parts?.length
+    ? damage.parts
+    : (damage.broken_parts || []).map(name => ({
+        name, partId: name, damage: damage.part_damage?.[name] ?? 0,
+      }))
+  const sumDamage = partsList.reduce((s, p) => s + (p.damage || 0), 0)
+  return sumDamage / TOTAL_VEHICLE_PARTS
 }
 
 // BeamNG abbreviation expansions for part name matching
@@ -100,6 +123,19 @@ function findMatchingPart(beamngName: string, allParts: Part[]): Part | undefine
     if (score > bestScore) { bestScore = score; bestMatch = part }
   }
   return bestScore >= 2 ? bestMatch : undefined
+}
+
+// Check if Unibody damage > 50% → car is totalled
+function isUnibodyTotalled(damage: CrashItem['damage']): boolean {
+  if (damage.parts?.length) {
+    const unibody = damage.parts.find(p => p.name.toLowerCase() === 'unibody')
+    if (unibody && unibody.damage > 0.4) return true
+  }
+  if (damage.part_damage) {
+    const dmg = damage.part_damage['Unibody'] ?? damage.part_damage['unibody'] ?? 0
+    if (dmg > 0.4) return true
+  }
+  return false
 }
 
 function calculateCrashCost(crash: CrashItem['damage'], allParts: Part[]) {
@@ -296,7 +332,9 @@ export function ResultsPage() {
 
   // Stats
   const totalCrashes = crashes.length
-  const severeCount = crashes.filter(c => getSeverityFromDamage(c.damage.total_damage) === 'severe' || getSeverityFromDamage(c.damage.total_damage) === 'total_loss').length
+  const getCrashSeverity = (c: CrashItem) =>
+    isUnibodyTotalled(c.damage) ? 'total_loss' : getSeverityFromDamage(computeTotalDamage(c.damage))
+  const severeCount = crashes.filter(c => { const s = getCrashSeverity(c); return s === 'severe' || s === 'total_loss' }).length
 
   // Run demo simulation
   const runSimulation = async () => {
@@ -334,9 +372,9 @@ export function ResultsPage() {
         speed_mph: simSpeed * 0.621,
       },
       damage: {
-        total_damage: Math.min(simSpeed / 120, 0.95),
+        total_damage: simParts.parts.reduce((s, p) => s + p.damage, 0) / TOTAL_VEHICLE_PARTS,
         previous_damage: 0,
-        damage_delta: Math.min(simSpeed / 120, 0.95),
+        damage_delta: simParts.parts.reduce((s, p) => s + p.damage, 0) / TOTAL_VEHICLE_PARTS,
         part_damage: simParts.part_damage,
         damage_by_zone: {
           front: simScenario.angle === 0 ? 0.8 : 0.2,
@@ -541,10 +579,10 @@ export function ResultsPage() {
               <div className="grid grid-cols-12 gap-4 px-6 py-3 bg-gray-50 border-b text-sm font-medium text-gray-500">
                 <div className="col-span-3">Veículo</div>
                 <div className="col-span-2">Severidade</div>
-                <div className="col-span-2">Data</div>
+                <div className="col-span-3">Data</div>
                 <div className="col-span-1">Peças</div>
                 <div className="col-span-2">Valor Manutenção</div>
-                <div className="col-span-2 text-right">Ações</div>
+                <div className="col-span-1 text-right">Ações</div>
               </div>
 
               {isLoading ? (
@@ -565,7 +603,7 @@ export function ResultsPage() {
                 </div>
               ) : (
                 filtered.map((crash) => {
-                  const severity = getSeverityFromDamage(crash.damage.total_damage)
+                  const severity = getCrashSeverity(crash)
                   const cost = calculateCrashCost(crash.damage, allParts)
                   return (
                     <motion.div
@@ -584,8 +622,15 @@ export function ResultsPage() {
                           {severityLabels[severity]}
                         </span>
                       </div>
-                      <div className="col-span-2 text-sm text-gray-600">
-                        {formatDate(crash.received_at)}
+                      <div className="col-span-3 text-sm text-gray-600 flex items-center gap-3">
+                        <div className="flex items-center gap-1.5">
+                          <Calendar className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+                          <span>{formatDateOnly(crash.received_at)}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <Clock className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+                          <span>{formatTimeOnly(crash.received_at)}</span>
+                        </div>
                       </div>
                       <div className="col-span-1 text-sm text-gray-600">
                         {crash.damage.broken_parts_count || 0}
@@ -593,7 +638,7 @@ export function ResultsPage() {
                       <div className="col-span-2 font-semibold text-vw-blue">
                         {formatBRL(cost.total)}
                       </div>
-                      <div className="col-span-2 flex justify-end">
+                      <div className="col-span-1 flex justify-end">
                         <ChevronRight className="h-5 w-5 text-gray-400" />
                       </div>
                     </motion.div>

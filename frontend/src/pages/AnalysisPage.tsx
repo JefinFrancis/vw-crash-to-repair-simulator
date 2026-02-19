@@ -51,8 +51,10 @@ const severityLabels: Record<string, string> = {
   total_loss: 'Perda Total',
 }
 
+// Total parts in the vehicle (from VEHICLE_PARTS.csv)
+const TOTAL_VEHICLE_PARTS = 51
+
 const getSeverityFromDamage = (totalDamage: number): string => {
-  if (totalDamage >= 0.8) return 'total_loss'
   if (totalDamage >= 0.5) return 'severe'
   if (totalDamage >= 0.2) return 'moderate'
   return 'minor'
@@ -154,8 +156,6 @@ export function AnalysisPage() {
 
   if (!crash) return null
 
-  const severity = getSeverityFromDamage(crash.damage.total_damage)
-
   // Use full parts array (all damaged parts) when available, fall back to broken_parts names
   const crashParts: Array<{ name: string; damage: number }> = crash.damage.parts?.length
     ? crash.damage.parts.map(p => ({ name: p.name, damage: p.damage }))
@@ -163,6 +163,13 @@ export function AnalysisPage() {
         name,
         damage: crash.damage.part_damage?.[name] ?? 0,
       }))
+
+  // Compute real total damage: sum of part damages / total vehicle parts
+  const realTotalDamage = crashParts.reduce((s, p) => s + p.damage, 0) / TOTAL_VEHICLE_PARTS
+
+  // Check if Unibody damage > 40% → car is totalled
+  const unibodyTotalled = crashParts.some(p => p.name.toLowerCase() === 'unibody' && p.damage > 0.4)
+  const severity = unibodyTotalled ? 'total_loss' : getSeverityFromDamage(realTotalDamage)
 
   // Build detailed parts list with pricing
   // Replace (>= 50%): full price | Repair 20-49%: 50% price | Repair < 20%: 25% price
@@ -260,7 +267,7 @@ export function AnalysisPage() {
                   <div className="flex items-center gap-2 text-gray-500 text-xs mb-1">
                     <AlertTriangle className="h-3.5 w-3.5" /> Dano Total
                   </div>
-                  <p className="text-lg font-bold text-gray-900">{(crash.damage.total_damage * 100).toFixed(1)}%</p>
+                  <p className="text-lg font-bold text-gray-900">{(realTotalDamage * 100).toFixed(1)}%</p>
                 </div>
                 <div className="bg-gray-50 rounded-lg p-3">
                   <div className="flex items-center gap-2 text-gray-500 text-xs mb-1">
@@ -276,6 +283,22 @@ export function AnalysisPage() {
                 </div>
               </div>
             </motion.div>
+
+            {/* Totalled Banner */}
+            {unibodyTotalled && (
+              <motion.div
+                className="bg-red-600 text-white rounded-xl p-5 flex items-center gap-4"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.15 }}
+              >
+                <AlertTriangle className="h-8 w-8 flex-shrink-0" />
+                <div>
+                  <p className="text-lg font-bold">Veículo com Perda Total</p>
+                  <p className="text-red-200 text-sm">O monobloco apresenta dano superior a 40%, tornando o reparo inviável.</p>
+                </div>
+              </motion.div>
+            )}
 
             {/* Damaged Parts Breakdown */}
             <motion.div
@@ -359,7 +382,7 @@ export function AnalysisPage() {
                 <h3 className="font-semibold">Severidade</h3>
               </div>
               <p className="text-3xl font-bold">{severityLabels[severity]}</p>
-              <p className="text-sm mt-1 opacity-75">{(crash.damage.total_damage * 100).toFixed(1)}% de dano total</p>
+              <p className="text-sm mt-1 opacity-75">{(realTotalDamage * 100).toFixed(1)}% de dano total</p>
             </motion.div>
 
             {/* Cost Breakdown */}
