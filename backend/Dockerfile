@@ -1,5 +1,5 @@
 # Multi-stage Dockerfile for VW Crash-to-Repair Simulator Backend
-# FastAPI + SQLAlchemy + PostgreSQL + Redis
+# FastAPI + SQLAlchemy + PostgreSQL
 
 # =============================================================================
 # Base Stage - Common dependencies
@@ -38,8 +38,8 @@ RUN poetry config virtualenvs.create false
 # =============================================================================
 FROM base as development
 
-# Install all dependencies including dev dependencies
-RUN poetry install --no-interaction --no-ansi
+# Install production dependencies only (dev tools like pre-commit not needed in container)
+RUN poetry install --only=main --no-interaction --no-ansi
 
 # Copy source code
 COPY . .

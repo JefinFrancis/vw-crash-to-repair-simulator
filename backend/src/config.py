@@ -31,10 +31,6 @@ class Settings(BaseSettings):
     DATABASE_POOL_SIZE: int = 5
     DATABASE_MAX_OVERFLOW: int = 10
 
-    # Redis settings
-    REDIS_URL: str = "redis://localhost:6379/0"
-    REDIS_TTL: int = 3600  # 1 hour default
-
     # BeamNG settings
     BEAMNG_HOST: str = "localhost"
     BEAMNG_PORT: int = 64256

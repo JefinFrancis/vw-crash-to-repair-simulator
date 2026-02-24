@@ -111,4 +111,8 @@ export const beamngService = {
   // Submit a crash event (for simulated crashes)
   submitCrashEvent: (crashEvent: CrashEventSubmission): Promise<CrashEventResponse> =>
     apiClient.post('/beamng/crash-event', crashEvent),
+
+  // Delete a specific crash by ID
+  deleteCrash: (crashId: string): Promise<{ success: boolean; message: string }> =>
+    apiClient.delete(`/beamng/crash/${crashId}`),
 }

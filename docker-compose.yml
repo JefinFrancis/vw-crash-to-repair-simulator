@@ -22,24 +22,6 @@ services:
       timeout: 5s
       retries: 5
 
-  # Redis Cache
-  redis:
-    image: redis:7-alpine
-    container_name: vw_simulator_redis
-    restart: unless-stopped
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    networks:
-      - vw_network
-    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-
   # FastAPI Backend
   backend:
     build:
@@ -58,11 +40,6 @@ services:
       - DATABASE_NAME=vw_crash_repair
       - DATABASE_USER=vw_simulator
       - DATABASE_PASSWORD=vw_simulator_dev
-      
-      # Cache
-      - REDIS_URL=redis://redis:6379
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
       
       # Application
       - ENVIRONMENT=local
@@ -94,8 +71,6 @@ services:
       - ./VEHICLE_PARTS.csv:/app/VEHICLE_PARTS.csv:ro
     depends_on:
       postgres:
-        condition: service_healthy
-      redis:
         condition: service_healthy
     networks:
       - vw_network
@@ -175,22 +150,6 @@ services:
     profiles:
       - tools
 
-  # Redis Insight (Redis Administration)
-  redis-insight:
-    image: redislabs/redisinsight:latest
-    container_name: vw_simulator_redis_insight
-    restart: unless-stopped
-    ports:
-      - "8001:8001"
-    volumes:
-      - redis_insight_data:/db
-    depends_on:
-      - redis
-    networks:
-      - vw_network
-    profiles:
-      - tools
-
 # Named volumes for data persistence
 volumes:
   postgres_data:
@@ -199,15 +158,7 @@ volumes:
       type: none
       o: bind
       device: ./data/postgres
-  redis_data:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: ./data/redis
   pgadmin_data:
-    driver: local
-  redis_insight_data:
     driver: local
 
 # Custom network for service communication

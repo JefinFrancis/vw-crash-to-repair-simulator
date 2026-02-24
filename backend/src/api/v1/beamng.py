@@ -25,7 +25,7 @@ router = APIRouter()
 # Dependency to get BeamNG service
 _beamng_service: Optional[BeamNGService] = None
 
-# In-memory storage for crash events (replace with Redis/DB in production)
+# In-memory storage for crash events (replace with DB persistence in production)
 _crash_events: List[Dict[str, Any]] = []
 MAX_CRASH_HISTORY = 50
 
@@ -550,6 +550,20 @@ async def get_crash_by_id(crash_id: str) -> Dict[str, Any]:
         status_code=status.HTTP_404_NOT_FOUND,
         detail=f"Crash event not found: {crash_id}"
     )
+
+
+@router.delete("/crash/{crash_id}")
+async def delete_crash(crash_id: str) -> Dict[str, Any]:
+    """Delete a specific crash event by ID."""
+    global _crash_events
+    original_count = len(_crash_events)
+    _crash_events = [c for c in _crash_events if c["crash_id"] != crash_id]
+    if len(_crash_events) == original_count:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Crash event not found: {crash_id}"
+        )
+    return {"success": True, "message": f"Crash {crash_id} deleted"}
 
 
 @router.delete("/crash-history")

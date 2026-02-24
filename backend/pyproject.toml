@@ -18,10 +18,6 @@ sqlalchemy = "^2.0.23"
 asyncpg = "^0.29.0"
 alembic = "^1.12.1"
 
-# Redis for caching
-redis = "^5.0.1"
-aioredis = "^2.0.1"
-
 # Pydantic for data validation and settings
 pydantic = {extras = ["email"], version = "^2.5.0"}
 pydantic-settings = "^2.1.0"
@@ -75,7 +71,6 @@ ipython = "^8.17.2"
 rich = "^13.7.0"
 
 # Type stubs
-types-redis = "^4.6.0.11"
 types-requests = "^2.31.0.10"
 types-python-jose = "^3.3.4.8"
 

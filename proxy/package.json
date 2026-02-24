@@ -1,0 +1,12 @@
+{
+  "name": "vw-beamng-proxy",
+  "version": "1.0.0",
+  "description": "Proxy to forward BeamNG crash events to the VW backend",
+  "main": "proxy.js",
+  "scripts": {
+    "start": "node proxy.js"
+  },
+  "dependencies": {
+    "dotenv": "^17.3.1"
+  }
+}

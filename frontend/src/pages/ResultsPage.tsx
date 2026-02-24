@@ -19,7 +19,8 @@ import {
   Loader2,
   FileText,
   Calendar,
-  Clock
+  Clock,
+  Trash2
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAppStore } from '../store/useAppStore'
@@ -310,6 +311,17 @@ export function ResultsPage() {
   const refreshCrashes = async () => {
     await fetchCrashes()
     toast.success('Lista atualizada!')
+  }
+
+  const deleteCrash = async (crashId: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    try {
+      await beamngService.deleteCrash(crashId)
+      setCrashes(prev => prev.filter(c => c.crash_id !== crashId))
+      toast.success('Sinistro removido')
+    } catch {
+      toast.error('Erro ao remover sinistro')
+    }
   }
 
   // Filter
@@ -638,8 +650,15 @@ export function ResultsPage() {
                       <div className="col-span-2 font-semibold text-vw-blue">
                         {formatBRL(cost.total)}
                       </div>
-                      <div className="col-span-1 flex justify-end">
-                        <ChevronRight className="h-5 w-5 text-gray-400" />
+                      <div className="col-span-1 flex justify-end items-center gap-1">
+                        <button
+                          onClick={(e) => deleteCrash(crash.crash_id, e)}
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                          title="Remover sinistro"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                        <ChevronRight className="h-4 w-4 text-gray-400" />
                       </div>
                     </motion.div>
                   )
