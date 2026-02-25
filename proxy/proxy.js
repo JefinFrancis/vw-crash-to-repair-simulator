@@ -4,7 +4,7 @@ const http = require("http");
 const https = require("https");
 
 // --- Configuration ---
-const PROXY_PORT = process.env.PROXY_PORT || 8080;
+const PROXY_PORT = process.env.PROXY_PORT || 9000;
 const TARGET_URL = process.env.TARGET_URL || "http://localhost:8000";
 // For Cloud Run, set: TARGET_URL=https://your-app-xyz.run.app
 

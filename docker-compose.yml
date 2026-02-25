@@ -130,6 +130,25 @@ services:
       timeout: 10s
       retries: 3
 
+  # BeamNG Proxy (forwards crash events from host to backend)
+  proxy:
+    image: node:20-alpine
+    container_name: vw_simulator_proxy
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+    environment:
+      - PROXY_PORT=9000
+      - TARGET_URL=http://backend:8000
+    volumes:
+      - ./proxy:/app
+    working_dir: /app
+    depends_on:
+      - backend
+    networks:
+      - vw_network
+    command: node proxy.js
+
   # pgAdmin (Database Administration)
   pgadmin:
     image: dpage/pgadmin4:latest

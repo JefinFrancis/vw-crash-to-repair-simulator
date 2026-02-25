@@ -1,7 +1,7 @@
 local M = {}
 
 local CONFIG = {
-    API_URL = "http://127.0.0.1:8080/api/v1/beamng/crash-event",
+    API_URL = "http://127.0.0.1:9000/api/v1/beamng/crash-event",
     DAMAGE_THRESHOLD = 0.05,
     POLL_INTERVAL = 0.25,
     COOLDOWN = 2.0
