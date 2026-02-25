@@ -10,7 +10,7 @@ export interface Customer {
   id: string
   name: string
   phone: string  // Brazilian mobile format: 5511999999999
-  preferred_dealer_cnpj?: string
+  preferred_dealer_id?: string
   created_at: string
   updated_at: string
 }
@@ -18,13 +18,13 @@ export interface Customer {
 export interface CustomerCreate {
   name: string
   phone: string
-  preferred_dealer_cnpj?: string
+  preferred_dealer_id?: string
 }
 
 export interface CustomerUpdate {
   name?: string
   phone?: string
-  preferred_dealer_cnpj?: string
+  preferred_dealer_id?: string
 }
 
 export const customerService = {
@@ -83,7 +83,7 @@ export const customerService = {
   /**
    * Get all customers who prefer a specific dealer
    */
-  async getByDealer(dealerCnpj: string, params?: {
+  async getByDealer(dealerId: string, params?: {
     skip?: number
     limit?: number
   }): Promise<Customer[]> {
@@ -91,13 +91,13 @@ export const customerService = {
     if (params?.skip !== undefined) queryParams.set('skip', params.skip.toString())
     if (params?.limit !== undefined) queryParams.set('limit', params.limit.toString())
 
-    const url = `/customers/dealer/${dealerCnpj}?${queryParams.toString()}`
+    const url = `/customers/dealer/${dealerId}?${queryParams.toString()}`
     return apiClient.get<Customer[]>(url)
   },
 
   /**
    * Format Brazilian phone number for display
-   * Converts 5511999999999 to (11) 99999-9999
+   * Converts 5511999999999 to +55 (11) 99999-9999
    */
   formatPhone(phone: string): string {
     if (!phone || phone.length !== 13) return phone
@@ -105,6 +105,21 @@ export const customerService = {
     // Remove country code (55)
     const withoutCountry = phone.substring(2)
     // Extract parts: area code (2 digits) + first part (5 digits) + last part (4 digits)
+    const areaCode = withoutCountry.substring(0, 2)
+    const firstPart = withoutCountry.substring(2, 7)
+    const lastPart = withoutCountry.substring(7)
+
+    return `+55 (${areaCode}) ${firstPart}-${lastPart}`
+  },
+
+  /**
+   * Format phone for input field (without country code, since badge shows +55)
+   * Converts 5511999999999 to (11) 99999-9999
+   */
+  formatPhoneForInput(phone: string): string {
+    if (!phone || phone.length !== 13) return phone
+
+    const withoutCountry = phone.substring(2)
     const areaCode = withoutCountry.substring(0, 2)
     const firstPart = withoutCountry.substring(2, 7)
     const lastPart = withoutCountry.substring(7)

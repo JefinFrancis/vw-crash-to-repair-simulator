@@ -106,14 +106,14 @@ class CustomerRepository(BaseRepository[Customer, CustomerCreate, CustomerUpdate
 
     async def get_customers_by_dealer(
         self,
-        dealer_cnpj: str,
+        dealer_id: str,
         skip: int = 0,
         limit: int = 100
     ) -> list[Customer]:
         """Get all customers who prefer a specific dealer.
 
         Args:
-            dealer_cnpj: Dealer's CNPJ
+            dealer_id: Dealer's UUID
             skip: Number of records to skip
             limit: Maximum number of records to return
 
@@ -122,7 +122,7 @@ class CustomerRepository(BaseRepository[Customer, CustomerCreate, CustomerUpdate
         """
         stmt = (
             select(Customer)
-            .where(Customer.preferred_dealer_cnpj == dealer_cnpj)
+            .where(Customer.preferred_dealer_id == dealer_id)
             .options(selectinload(Customer.preferred_dealer))
             .offset(skip)
             .limit(limit)

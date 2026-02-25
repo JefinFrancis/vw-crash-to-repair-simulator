@@ -31,6 +31,29 @@ class DealerService(BaseService):
     def __init__(self, db_session: AsyncSession):
         super().__init__(db_session)
 
+    async def get_dealer_by_id(self, dealer_id: str) -> Optional[Dealer]:
+        """
+        Get a dealer by UUID.
+
+        Args:
+            dealer_id: Dealer UUID string
+
+        Returns:
+            Dealer instance or None if not found
+        """
+        try:
+            from uuid import UUID as PyUUID
+            uid = PyUUID(dealer_id)
+            result = await self.db_session.execute(
+                select(Dealer).where(Dealer.id == uid)
+            )
+            return result.scalar_one_or_none()
+        except ValueError:
+            raise ValidationException(f"Invalid dealer ID format: {dealer_id}")
+        except Exception as e:
+            logger.error(f"Error getting dealer by ID: {str(e)}")
+            raise ServiceException(f"Failed to get dealer: {str(e)}")
+
     async def create_dealer(self, dealer_data: Dict[str, Any]) -> Dealer:
         """
         Create a new dealer.

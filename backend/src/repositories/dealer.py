@@ -35,6 +35,24 @@ class DealerRepository:
         self.model = Dealer
         self.db_session = db_session
 
+    async def get_by_id(self, dealer_id: UUID) -> Optional[Dealer]:
+        """
+        Get dealer by UUID.
+
+        Args:
+            dealer_id: Dealer UUID
+
+        Returns:
+            Dealer instance or None if not found
+        """
+        try:
+            query = select(self.model).where(self.model.id == dealer_id)
+            result = await self.db_session.execute(query)
+            return result.scalar_one_or_none()
+        except Exception as e:
+            logger.error(f"Error getting dealer by ID {dealer_id}: {str(e)}")
+            raise
+
     async def get_by_unique_field(self, field_name: str, field_value: str) -> Optional[Dealer]:
         """
         Get dealer by unique identifier (CNPJ or name).

@@ -299,13 +299,13 @@ async def delete_customer(
 
 
 @router.get(
-    "/dealer/{dealer_cnpj}",
+    "/dealer/{dealer_id}",
     response_model=list[CustomerResponse],
     summary="Get customers by dealer",
     description="Get all customers who prefer a specific dealer"
 )
 async def get_customers_by_dealer(
-    dealer_cnpj: str,
+    dealer_id: str,
     customer_service: CustomerServiceDep,
     skip: int = Query(0, ge=0, description="Number of records to skip"),
     limit: int = Query(100, ge=1, le=1000, description="Maximum records to return"),
@@ -313,7 +313,7 @@ async def get_customers_by_dealer(
     """Get all customers who prefer a specific dealer.
 
     Args:
-        dealer_cnpj: Dealer's CNPJ
+        dealer_id: Dealer's UUID
         customer_service: Customer service dependency
         skip: Number of records to skip
         limit: Maximum number of records to return
@@ -326,9 +326,9 @@ async def get_customers_by_dealer(
         HTTPException: 500 for unexpected errors
     """
     try:
-        logger.info("API: Fetching customers by dealer", dealer_cnpj=dealer_cnpj)
+        logger.info("API: Fetching customers by dealer", dealer_id=dealer_id)
         customers = await customer_service.get_customers_by_dealer(
-            dealer_cnpj=dealer_cnpj,
+            dealer_id=dealer_id,
             skip=skip,
             limit=limit
         )
@@ -336,7 +336,7 @@ async def get_customers_by_dealer(
         return customers
 
     except NotFoundException as e:
-        logger.warning("API: Dealer not found", dealer_cnpj=dealer_cnpj)
+        logger.warning("API: Dealer not found", dealer_id=dealer_id)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"message": str(e)}

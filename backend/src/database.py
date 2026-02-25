@@ -56,6 +56,26 @@ async def close_db():
         logger.error(f"Error disposing database engine: {e}")
 
 
+async def _apply_pending_migrations(conn):
+    """Apply pending schema migrations that create_all cannot handle."""
+    # Check if customers table has old preferred_dealer_cnpj column
+    result = await conn.execute(text(
+        "SELECT column_name FROM information_schema.columns "
+        "WHERE table_name = 'customers' AND column_name = 'preferred_dealer_cnpj'"
+    ))
+    if result.scalar():
+        logger.info("Migrating customers.preferred_dealer_cnpj -> preferred_dealer_id")
+        await conn.execute(text("ALTER TABLE customers DROP COLUMN preferred_dealer_cnpj"))
+        await conn.execute(text(
+            "ALTER TABLE customers ADD COLUMN preferred_dealer_id UUID "
+            "REFERENCES dealers(id) ON DELETE SET NULL"
+        ))
+        await conn.execute(text(
+            "CREATE INDEX ix_customers_preferred_dealer_id ON customers(preferred_dealer_id)"
+        ))
+        logger.info("Migration complete: preferred_dealer_id column added")
+
+
 async def initialize_db():
     """Initialize database connection and create tables."""
     try:
@@ -66,6 +86,9 @@ async def initialize_db():
 
             # Create all tables
             await conn.run_sync(Base.metadata.create_all)
+
+            # Apply any pending migrations that create_all can't handle
+            await _apply_pending_migrations(conn)
 
         logger.info("Database initialized successfully")
 

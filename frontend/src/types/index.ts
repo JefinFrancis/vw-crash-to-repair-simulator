@@ -14,6 +14,7 @@ export interface Vehicle {
   make: string;
   beamng_model?: string;
   beamng_config?: string;
+  customer_id?: string;
   created_at: string;
   updated_at: string;
 }
@@ -25,6 +26,7 @@ export interface VehicleCreate {
   make?: string;
   beamng_model?: string;
   beamng_config?: string;
+  customer_id?: string;
 }
 
 // Dealer Types

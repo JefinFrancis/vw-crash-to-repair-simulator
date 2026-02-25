@@ -24,7 +24,7 @@ import toast from 'react-hot-toast'
 interface FormData {
   name: string
   phone: string
-  preferred_dealer_cnpj: string
+  preferred_dealer_id: string
 }
 
 export function CustomerManagementPage() {
@@ -36,7 +36,7 @@ export function CustomerManagementPage() {
   const [formData, setFormData] = useState<FormData>({
     name: '',
     phone: '',
-    preferred_dealer_cnpj: ''
+    preferred_dealer_id: ''
   })
   const [phoneError, setPhoneError] = useState('')
 
@@ -123,7 +123,7 @@ export function CustomerManagementPage() {
     }).length
 
     const withPreferredDealer = customers.filter(
-      customer => customer.preferred_dealer_cnpj
+      customer => customer.preferred_dealer_id
     ).length
 
     return {
@@ -139,7 +139,7 @@ export function CustomerManagementPage() {
     setFormData({
       name: '',
       phone: '',
-      preferred_dealer_cnpj: ''
+      preferred_dealer_id: ''
     })
     setPhoneError('')
     setShowModal(true)
@@ -150,8 +150,8 @@ export function CustomerManagementPage() {
     setSelectedCustomer(customer)
     setFormData({
       name: customer.name,
-      phone: customerService.formatPhone(customer.phone),
-      preferred_dealer_cnpj: customer.preferred_dealer_cnpj || ''
+      phone: customerService.formatPhoneForInput(customer.phone),
+      preferred_dealer_id: customer.preferred_dealer_id || ''
     })
     setPhoneError('')
     setShowModal(true)
@@ -163,7 +163,7 @@ export function CustomerManagementPage() {
     setFormData({
       name: '',
       phone: '',
-      preferred_dealer_cnpj: ''
+      preferred_dealer_id: ''
     })
     setPhoneError('')
   }
@@ -228,7 +228,7 @@ export function CustomerManagementPage() {
     const submitData: CustomerCreate = {
       name: formData.name.trim(),
       phone: unformattedPhone,
-      preferred_dealer_cnpj: formData.preferred_dealer_cnpj || undefined
+      preferred_dealer_id: formData.preferred_dealer_id || undefined
     }
 
     if (isEditMode && selectedCustomer) {
@@ -249,10 +249,10 @@ export function CustomerManagementPage() {
     }
   }
 
-  const getDealerName = (cnpj?: string) => {
-    if (!cnpj) return 'Nenhuma'
-    const dealer = dealers.find(d => d.business_id === cnpj)
-    return dealer ? dealer.name : cnpj
+  const getDealerName = (dealerId?: string) => {
+    if (!dealerId) return 'Nenhuma'
+    const dealer = dealers.find(d => d.id === dealerId)
+    return dealer ? dealer.name : dealerId
   }
 
   return (
@@ -416,11 +416,11 @@ export function CustomerManagementPage() {
                       </span>
                     </div>
                     <div className="col-span-3">
-                      {customer.preferred_dealer_cnpj ? (
+                      {customer.preferred_dealer_id ? (
                         <div className="flex items-center gap-2">
                           <Building2 className="h-4 w-4 text-purple-600" />
                           <span className="text-sm text-gray-700">
-                            {getDealerName(customer.preferred_dealer_cnpj)}
+                            {getDealerName(customer.preferred_dealer_id)}
                           </span>
                         </div>
                       ) : (
@@ -511,13 +511,17 @@ export function CustomerManagementPage() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Telefone <span className="text-red-500">*</span>
                     </label>
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <div className="flex">
+                      <span className={`inline-flex items-center px-3 text-sm font-medium text-gray-600 bg-gray-100 border border-r-0 rounded-l-lg ${
+                        phoneError ? 'border-red-300' : 'border-gray-300'
+                      }`}>
+                        +55
+                      </span>
                       <input
                         type="tel"
                         value={formData.phone}
                         onChange={(e) => handlePhoneChange(e.target.value)}
-                        className={`w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-vw-blue focus:border-transparent ${
+                        className={`w-full px-4 py-2 border rounded-r-lg focus:ring-2 focus:ring-vw-blue focus:border-transparent ${
                           phoneError ? 'border-red-300' : 'border-gray-300'
                         }`}
                         placeholder="(11) 99999-9999"
@@ -532,7 +536,7 @@ export function CustomerManagementPage() {
                       </p>
                     )}
                     <p className="text-xs text-gray-500 mt-1">
-                      Formato: (XX) 9XXXX-XXXX
+                      Formato: +55 (XX) 9XXXX-XXXX
                     </p>
                   </div>
 
@@ -544,13 +548,13 @@ export function CustomerManagementPage() {
                     <div className="relative">
                       <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                       <select
-                        value={formData.preferred_dealer_cnpj}
-                        onChange={(e) => setFormData(prev => ({ ...prev, preferred_dealer_cnpj: e.target.value }))}
+                        value={formData.preferred_dealer_id}
+                        onChange={(e) => setFormData(prev => ({ ...prev, preferred_dealer_id: e.target.value }))}
                         className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-vw-blue focus:border-transparent appearance-none"
                       >
                         <option value="">Nenhuma selecionada</option>
                         {dealers.map(dealer => (
-                          <option key={dealer.id} value={dealer.business_id}>
+                          <option key={dealer.id} value={dealer.id}>
                             {dealer.name} - {dealer.city}/{dealer.state}
                           </option>
                         ))}

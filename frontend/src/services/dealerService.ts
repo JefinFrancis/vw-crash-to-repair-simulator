@@ -59,4 +59,8 @@ export const dealerService = {
   // Get dealer by business ID
   getByBusinessId: (businessId: string): Promise<Dealer> =>
     apiClient.get(`/dealers/${businessId}/`),
+
+  // Get dealer by UUID
+  getById: (id: string): Promise<Dealer> =>
+    apiClient.get(`/dealers/${id}`),
 }

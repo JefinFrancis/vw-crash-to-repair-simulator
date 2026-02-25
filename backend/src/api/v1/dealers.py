@@ -167,3 +167,33 @@ async def validate_dealer_cnpj(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={"error": "Internal Server Error", "message": "Failed to validate CNPJ"}
         )
+
+
+@router.get("/{dealer_id}", response_model=DealerResponse)
+async def get_dealer_by_id(
+    dealer_id: str,
+    dealer_service: DealerServiceDep
+) -> DealerResponse:
+    """Get a dealer by UUID."""
+    try:
+        logger.info("Fetching dealer by ID", dealer_id=dealer_id)
+        dealer = await dealer_service.get_dealer_by_id(dealer_id)
+        if not dealer:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={"error": "Not Found", "message": "Dealer not found"}
+            )
+        return dealer
+    except HTTPException:
+        raise
+    except ValidationException as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"error": "Validation Error", "message": str(e)}
+        )
+    except Exception as e:
+        logger.error("Unexpected error fetching dealer", error=str(e), exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={"error": "Internal Server Error", "message": "Failed to fetch dealer"}
+        )

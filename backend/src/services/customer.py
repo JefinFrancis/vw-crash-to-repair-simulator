@@ -58,21 +58,22 @@ class CustomerService(BaseService):
             )
 
         # Validate preferred dealer if provided
-        if customer_data.preferred_dealer_cnpj:
-            dealer = await self.dealer_repo.get_by_cnpj(customer_data.preferred_dealer_cnpj)
+        if customer_data.preferred_dealer_id:
+            dealer = await self.dealer_repo.get_by_id(customer_data.preferred_dealer_id)
             if not dealer:
                 logger.warning(
                     "Preferred dealer not found",
-                    cnpj=customer_data.preferred_dealer_cnpj
+                    dealer_id=str(customer_data.preferred_dealer_id)
                 )
                 raise ValidationException(
                     message="Concessionária preferida não encontrada",
-                    field="preferred_dealer_cnpj",
-                    value=customer_data.preferred_dealer_cnpj
+                    field="preferred_dealer_id",
+                    value=str(customer_data.preferred_dealer_id)
                 )
 
         # Create customer
         customer = await self.customer_repo.create(customer_data)
+        await self.db_session.commit()
         logger.info("Customer created successfully", customer_id=str(customer.id))
 
         return CustomerResponse.model_validate(customer)
@@ -178,7 +179,7 @@ class CustomerService(BaseService):
         logger.info("Updating customer", customer_id=customer_id)
 
         # Check if customer exists
-        customer = await self.customer_repo.get(customer_id)
+        customer = await self.customer_repo.get_by_id(customer_id)
         if not customer:
             logger.warning("Customer not found", customer_id=customer_id)
             raise NotFoundException(
@@ -204,21 +205,22 @@ class CustomerService(BaseService):
                 )
 
         # Validate preferred dealer if being updated
-        if customer_data.preferred_dealer_cnpj:
-            dealer = await self.dealer_repo.get_by_cnpj(customer_data.preferred_dealer_cnpj)
+        if customer_data.preferred_dealer_id:
+            dealer = await self.dealer_repo.get_by_id(customer_data.preferred_dealer_id)
             if not dealer:
                 logger.warning(
                     "Preferred dealer not found",
-                    cnpj=customer_data.preferred_dealer_cnpj
+                    dealer_id=str(customer_data.preferred_dealer_id)
                 )
                 raise ValidationException(
                     message="Concessionária preferida não encontrada",
-                    field="preferred_dealer_cnpj",
-                    value=customer_data.preferred_dealer_cnpj
+                    field="preferred_dealer_id",
+                    value=str(customer_data.preferred_dealer_id)
                 )
 
         # Update customer
         updated_customer = await self.customer_repo.update(customer_id, customer_data)
+        await self.db_session.commit()
         logger.info("Customer updated successfully", customer_id=customer_id)
 
         return CustomerResponse.model_validate(updated_customer)
@@ -234,7 +236,7 @@ class CustomerService(BaseService):
         """
         logger.info("Deleting customer", customer_id=customer_id)
 
-        customer = await self.customer_repo.get(customer_id)
+        customer = await self.customer_repo.get_by_id(customer_id)
         if not customer:
             logger.warning("Customer not found", customer_id=customer_id)
             raise NotFoundException(
@@ -243,18 +245,19 @@ class CustomerService(BaseService):
             )
 
         await self.customer_repo.delete(customer_id)
+        await self.db_session.commit()
         logger.info("Customer deleted successfully", customer_id=customer_id)
 
     async def get_customers_by_dealer(
         self,
-        dealer_cnpj: str,
+        dealer_id: str,
         skip: int = 0,
         limit: int = 100
     ) -> list[CustomerResponse]:
         """Get all customers who prefer a specific dealer.
 
         Args:
-            dealer_cnpj: Dealer's CNPJ
+            dealer_id: Dealer's UUID
             skip: Number of records to skip
             limit: Maximum number of records to return
 
@@ -264,19 +267,19 @@ class CustomerService(BaseService):
         Raises:
             NotFoundException: If dealer not found
         """
-        logger.info("Fetching customers by dealer", dealer_cnpj=dealer_cnpj)
+        logger.info("Fetching customers by dealer", dealer_id=dealer_id)
 
         # Validate dealer exists
-        dealer = await self.dealer_repo.get_by_cnpj(dealer_cnpj)
+        dealer = await self.dealer_repo.get_by_id(dealer_id)
         if not dealer:
-            logger.warning("Dealer not found", cnpj=dealer_cnpj)
+            logger.warning("Dealer not found", dealer_id=dealer_id)
             raise NotFoundException(
                 resource="Dealer",
-                resource_id=dealer_cnpj
+                resource_id=dealer_id
             )
 
         customers = await self.customer_repo.get_customers_by_dealer(
-            dealer_cnpj=dealer_cnpj,
+            dealer_id=dealer_id,
             skip=skip,
             limit=limit
         )

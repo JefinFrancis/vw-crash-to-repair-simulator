@@ -1,7 +1,7 @@
 """Customer schemas for API request/response validation.
 
 This module defines Pydantic models for customer data validation,
-ensuring proper format for Brazilian phone numbers and CNPJ codes.
+ensuring proper format for Brazilian phone numbers.
 """
 
 import re
@@ -25,10 +25,9 @@ class CustomerBase(BaseModel):
         pattern=r"^55\d{2}9\d{8}$",
         description="Mobile phone number in Brazilian format (5511999999999)"
     )
-    preferred_dealer_cnpj: Optional[str] = Field(
+    preferred_dealer_id: Optional[uuid.UUID] = Field(
         None,
-        pattern=r"^\d{14}$",
-        description="CNPJ of the customer's preferred dealer (14 digits)"
+        description="UUID of the customer's preferred dealer"
     )
 
     @field_validator("phone")
@@ -38,15 +37,6 @@ class CustomerBase(BaseModel):
 
         Format: 55 (country code) + 2 digits (area code) + 9 + 8 digits
         Example: 5511999999999
-
-        Args:
-            v: Phone number string
-
-        Returns:
-            Validated phone number
-
-        Raises:
-            ValueError: If phone format is invalid
         """
         if not re.match(r"^55\d{2}9\d{8}$", v):
             raise ValueError(
@@ -54,31 +44,6 @@ class CustomerBase(BaseModel):
                 "Example: 5511999999999"
             )
         return v
-
-    @field_validator("preferred_dealer_cnpj")
-    @classmethod
-    def validate_cnpj(cls, v: Optional[str]) -> Optional[str]:
-        """Validate CNPJ format.
-
-        Args:
-            v: CNPJ string
-
-        Returns:
-            Validated CNPJ or None
-
-        Raises:
-            ValueError: If CNPJ format is invalid
-        """
-        if v is None:
-            return v
-
-        # Remove any non-digit characters
-        cnpj = re.sub(r"\D", "", v)
-
-        if len(cnpj) != 14:
-            raise ValueError("CNPJ must have exactly 14 digits")
-
-        return cnpj
 
 
 class CustomerCreate(CustomerBase):
@@ -107,10 +72,9 @@ class CustomerUpdate(BaseModel):
         pattern=r"^55\d{2}9\d{8}$",
         description="Mobile phone number in Brazilian format"
     )
-    preferred_dealer_cnpj: Optional[str] = Field(
+    preferred_dealer_id: Optional[uuid.UUID] = Field(
         None,
-        pattern=r"^\d{14}$",
-        description="CNPJ of the customer's preferred dealer"
+        description="UUID of the customer's preferred dealer"
     )
 
     @field_validator("phone")
@@ -126,20 +90,6 @@ class CustomerUpdate(BaseModel):
                 "Example: 5511999999999"
             )
         return v
-
-    @field_validator("preferred_dealer_cnpj")
-    @classmethod
-    def validate_cnpj(cls, v: Optional[str]) -> Optional[str]:
-        """Validate CNPJ format."""
-        if v is None:
-            return v
-
-        cnpj = re.sub(r"\D", "", v)
-
-        if len(cnpj) != 14:
-            raise ValueError("CNPJ must have exactly 14 digits")
-
-        return cnpj
 
 
 class CustomerResponse(CustomerBase):

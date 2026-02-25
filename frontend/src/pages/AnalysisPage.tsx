@@ -13,10 +13,17 @@ import {
   Calendar,
   Wrench,
   BarChart3,
-  Check
+  Check,
+  MessageCircle,
+  X,
+  Loader2
 } from 'lucide-react'
+import toast from 'react-hot-toast'
 import { useAppStore } from '../store/useAppStore'
 import { partService } from '../services/partService'
+import { customerService, Customer } from '../services/customerService'
+import { dealerService } from '../services/dealerService'
+import { whatsappService } from '../services/whatsappService'
 import { Part } from '../types'
 
 // Labor rate per hour (R$/h)
@@ -136,6 +143,12 @@ export function AnalysisPage() {
     return initial
   })
 
+  const [showWppModal, setShowWppModal] = useState(false)
+  const [wppCustomer, setWppCustomer] = useState<Customer | null>(null)
+  const [wppDealerName, setWppDealerName] = useState('')
+  const [sendingWpp, setSendingWpp] = useState(false)
+  const [loadingWppData, setLoadingWppData] = useState(false)
+
   const toggleReplace = (partName: string) => {
     setReplaceParts(prev => ({ ...prev, [partName]: !prev[partName] }))
   }
@@ -200,6 +213,58 @@ export function AnalysisPage() {
   const totalLaborHours = partsDetail.reduce((s, p) => s + p.laborHours, 0)
   const totalLaborCost = totalLaborHours * LABOR_RATE_BRL
   const totalCost = totalPartsCost + totalLaborCost
+
+  const openWppModal = async () => {
+    if (!selectedVehicle?.customer_id) {
+      toast.error('Veículo não possui proprietário cadastrado')
+      return
+    }
+
+    setShowWppModal(true)
+    setWppCustomer(null)
+    setWppDealerName('Caraigá - Volkswagen Morumbi')
+    setLoadingWppData(true)
+    try {
+      const customer = await customerService.getById(selectedVehicle.customer_id)
+      setWppCustomer(customer)
+
+      if (customer.preferred_dealer_id) {
+        try {
+          const dealer = await dealerService.getById(customer.preferred_dealer_id)
+          setWppDealerName(dealer.name)
+        } catch {
+          // keep default dealer name
+        }
+      }
+    } catch {
+      toast.error('Erro ao carregar dados do proprietário')
+      setShowWppModal(false)
+    } finally {
+      setLoadingWppData(false)
+    }
+  }
+
+  const handleSendWhatsApp = async () => {
+    if (!wppCustomer) return
+
+    setSendingWpp(true)
+    try {
+      await whatsappService.sendCollisionWhatsApp({
+        phone: wppCustomer.phone,
+        repairPrice: formatBRL(totalCost),
+        dealerName: wppDealerName,
+        dealerAddress: 'Av. Ulysses Reis de Mattos, 100 - Real Parque, São Paulo - SP',
+        dealerPhone: '(11) 3525-8000',
+      })
+
+      toast.success('Orçamento enviado via WhatsApp!')
+      setShowWppModal(false)
+    } catch {
+      toast.error('Erro ao enviar mensagem via WhatsApp')
+    } finally {
+      setSendingWpp(false)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
@@ -385,6 +450,18 @@ export function AnalysisPage() {
               <p className="text-sm mt-1 opacity-75">{(realTotalDamage * 100).toFixed(1)}% de dano total</p>
             </motion.div>
 
+            {/* WhatsApp Button */}
+            <motion.button
+              onClick={openWppModal}
+              className="w-full flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-4 rounded-xl transition-colors"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.05 }}
+            >
+              <MessageCircle className="h-5 w-5" />
+              Enviar Orçamento via WhatsApp
+            </motion.button>
+
             {/* Cost Breakdown */}
             <motion.div
               className="bg-white rounded-xl p-6 shadow-sm border"
@@ -477,6 +554,75 @@ export function AnalysisPage() {
           </div>
         </div>
       </div>
+
+      {/* WhatsApp Confirmation Modal */}
+      {showWppModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <motion.div
+            className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+          >
+            <div className="flex items-center justify-between px-6 py-4 border-b">
+              <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                <MessageCircle className="h-5 w-5 text-green-500" />
+                Confirmar Envio via WhatsApp
+              </h3>
+              <button onClick={() => setShowWppModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="px-6 py-4">
+              {loadingWppData ? (
+                <div className="flex items-center justify-center py-8 text-gray-400">
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                </div>
+              ) : wppCustomer ? (
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase tracking-wide">Proprietário</p>
+                    <p className="font-medium text-gray-900">{wppCustomer.name}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase tracking-wide">Telefone</p>
+                    <p className="font-medium text-gray-900">{customerService.formatPhone(wppCustomer.phone)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase tracking-wide">Concessionária</p>
+                    <p className="font-medium text-gray-900">{wppDealerName}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase tracking-wide">Valor do Orçamento</p>
+                    <p className="font-bold text-vw-blue text-lg">{formatBRL(totalCost)}</p>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
+            <div className="px-6 py-4 border-t flex justify-end gap-3">
+              <button
+                onClick={() => setShowWppModal(false)}
+                className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSendWhatsApp}
+                disabled={!wppCustomer || sendingWpp}
+                className="flex items-center gap-2 px-4 py-2 text-sm bg-green-500 hover:bg-green-600 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {sendingWpp ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <MessageCircle className="h-4 w-4" />
+                )}
+                {sendingWpp ? 'Enviando...' : 'Confirmar e Enviar'}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   )
 }

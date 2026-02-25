@@ -50,6 +50,10 @@ class Settings(BaseSettings):
     DEFAULT_LOCALE: str = "pt_BR"
     DEFAULT_TIMEZONE: str = "America/Sao_Paulo"
 
+    # WhatsApp Integration
+    WPP_API_URL: str = "https://automobilechat-1060504391242.us-central1.run.app/agent/sendWppCollision"
+    WPP_API_KEY: str = ""
+
     # Logging
     LOG_LEVEL: str = "INFO"
     LOG_FORMAT: str = "json"

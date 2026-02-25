@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter
 
-from src.api.v1 import health, damage, estimates, dealers, appointments, beamng, vehicles, parts
+from src.api.v1 import health, damage, estimates, dealers, appointments, beamng, vehicles, parts, whatsapp
 
 # Create main API router
 api_router = APIRouter()
@@ -16,3 +16,4 @@ api_router.include_router(damage.router, prefix="/damage", tags=["Damage Analysi
 api_router.include_router(estimates.router, prefix="/estimates", tags=["Repair Estimates"])
 api_router.include_router(dealers.router, prefix="/dealers", tags=["VW Dealers"])
 api_router.include_router(appointments.router, prefix="/appointments", tags=["Appointments"])
+api_router.include_router(whatsapp.router, prefix="/whatsapp", tags=["WhatsApp"])

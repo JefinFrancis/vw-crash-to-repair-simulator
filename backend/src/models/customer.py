@@ -5,6 +5,7 @@ appointments for vehicle repairs at VW dealerships.
 """
 
 from sqlalchemy import Column, String, ForeignKey
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from .base import BaseModel
 
@@ -18,7 +19,7 @@ class Customer(BaseModel):
     Attributes:
         name: Customer's full name
         phone: Mobile phone number in Brazilian format (5511999999999)
-        preferred_dealer_cnpj: CNPJ of the customer's preferred dealer
+        preferred_dealer_id: UUID of the customer's preferred dealer
         preferred_dealer: Relationship to the Dealer model
         vehicles: Relationship to customer's vehicles (one-to-many)
     """
@@ -30,9 +31,9 @@ class Customer(BaseModel):
     phone = Column(String(13), nullable=False, unique=True, index=True)  # Brazilian mobile: 5511999999999
 
     # Preferred dealer relationship
-    preferred_dealer_cnpj = Column(
-        String(14),
-        ForeignKey("dealers.cnpj", ondelete="SET NULL"),
+    preferred_dealer_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("dealers.id", ondelete="SET NULL"),
         nullable=True,
         index=True
     )
@@ -41,7 +42,7 @@ class Customer(BaseModel):
     preferred_dealer = relationship(
         "Dealer",
         backref="preferred_customers",
-        foreign_keys=[preferred_dealer_cnpj]
+        foreign_keys=[preferred_dealer_id]
     )
 
     vehicles = relationship(
