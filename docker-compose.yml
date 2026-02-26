@@ -66,7 +66,7 @@ services:
       - ACCESS_TOKEN_EXPIRE_MINUTES=30
 
       # WhatsApp Integration
-      - WPP_API_KEY=${WPP_API_KEY:-}
+      - WPP_API_KEY=05a3a4c4-2a66-4aac-b965-3922018de527
     volumes:
       - ./backend:/app
       - ./backend/logs:/app/logs

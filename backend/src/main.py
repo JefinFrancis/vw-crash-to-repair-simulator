@@ -10,8 +10,8 @@ from typing import AsyncGenerator
 import uvicorn
 
 from src.config import settings
-from src.database import initialize_db, close_db, seed_parts_if_empty
-from src.api.v1 import health, vehicles, damage, dealers, parts, appointments, beamng, estimates, customers
+from src.database import initialize_db, close_db, seed_parts_if_empty, seed_core_entities
+from src.api.v1 import health, vehicles, damage, dealers, parts, appointments, beamng, estimates, customers, whatsapp
 from src.utils.logging import configure_logging
 
 
@@ -29,6 +29,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         await initialize_db()
         logger.info("Database initialized successfully")
         await seed_parts_if_empty()
+        await seed_core_entities()
     except Exception as e:
         logger.error("Failed to initialize database", error=str(e))
         raise
@@ -164,6 +165,7 @@ app.include_router(parts.router, prefix="/api/v1/parts", tags=["VW Parts"])
 app.include_router(appointments.router, prefix="/api/v1/appointments", tags=["Appointments"])
 app.include_router(customers.router, prefix="/api/v1/customers", tags=["Customers"])
 app.include_router(estimates.router, prefix="/api/v1/estimates", tags=["Repair Estimates"])
+app.include_router(whatsapp.router, prefix="/api/v1/whatsapp", tags=["WhatsApp"])
 
 
 # Root endpoint

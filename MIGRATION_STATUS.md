@@ -1,8 +1,8 @@
 # 🚀 VW Crash-to-Repair Simulator - Architecture Modernization Status
 
-> **Status Update**: Phases 1-4 Complete. Game reporting flow operational with DB-driven pricing.
+> **Status Update**: Phases 1-6 Complete. Full crash-to-repair flow with WhatsApp integration.
 > **Current State**: Modern React + FastAPI + PostgreSQL stack fully functional.
-> **Parts Catalog**: 51 VW T-Cross parts auto-seeded from CSV on startup.
+> **Auto-Seed**: Parts (CSV), dealers (JSON), customer + vehicle with relationships on every startup.
 
 ---
 
@@ -54,19 +54,32 @@
 - [x] **Auto-seed on startup** → Parts table populated from CSV if empty (no manual seed needed)
 - [x] **Documentation updates** → Updated MD files to reflect current state
 
+### ✅ Phase 6: Customer Integration & Data Persistence (COMPLETE)
+- [x] **Customer-Dealer UUID FK** → Migrated `preferred_dealer_cnpj` (String) to `preferred_dealer_id` (UUID FK)
+- [x] **Vehicle-Customer ownership** → Vehicles have `customer_id` FK, owner selector in vehicle form
+- [x] **Vehicle edit modal** → Full edit functionality for vehicle details
+- [x] **WhatsApp integration** → Backend proxy for collision notifications, auto-fetch customer from vehicle
+- [x] **Phone +55 prefix** → Visible country code badge in phone input, proper format utilities
+- [x] **Redis removal** → Replaced with Node.js proxy for BeamNG crash event forwarding
+- [x] **Core entity auto-seed** → Dealers (10 from JSON), customer "Valmor Castro", T-Cross vehicle with relationships
+- [x] **Relationship repair** → Broken FKs auto-fixed on every startup (dealer↔customer↔vehicle chain)
+- [x] **Service commit fix** → All CustomerService mutations now properly commit transactions
+
 ---
 
 ## 🎯 Current State
 
 ### Modern Architecture (Active)
 ```
-✅ OPERATIONAL - Full crash-to-repair flow working
+✅ OPERATIONAL - Full crash-to-repair flow with WhatsApp integration
 ├── Backend: FastAPI + SQLAlchemy 2.0 + PostgreSQL (port 8000)
-├── Frontend: React + TypeScript + Tailwind CSS (port 3000)
-├── Database: PostgreSQL with auto-seed parts catalog (51 parts from CSV)
-├── Cache: Redis for performance optimization
-├── BeamNG: Lua mod sends crash events → Backend stores → Frontend displays
-├── Parts: DB-driven pricing with PT names, labor hours, categories
+├── Frontend: React + TypeScript + Vite + Tailwind CSS (port 3000)
+├── Database: PostgreSQL with auto-seed (parts, dealers, customer, vehicle)
+├── Proxy: Node.js proxy (port 9000) forwards BeamNG crash events
+├── BeamNG: Lua mod → Proxy → Backend → Frontend (real-time crash flow)
+├── WhatsApp: Backend proxy → external API for collision notifications
+├── Parts: DB-driven pricing with PT names, labor hours, categories (51 parts)
+├── Entities: T-Cross → Valmor Castro → VW Morumbi (auto-seeded with FK repair)
 ├── Development: Docker Compose with hot reload
 └── API Docs: http://localhost:8000/docs
 ```
@@ -106,10 +119,13 @@ make dev
 | Route | Page | Description |
 |-------|------|-------------|
 | `/` | LandingPage | Dashboard home with stats and navigation |
-| `/damage-reports` | DamageReportsPage | List crashes with DB-driven costs, detail view with per-part breakdown |
+| `/simulation` | SimulationPage | Vehicle selection + BeamNG crash simulation |
+| `/analysis` | AnalysisPage | Crash analysis + WhatsApp customer notification |
+| `/damage-reports` | DamageReportsPage | List crashes with DB-driven costs, per-part breakdown |
 | `/results` | ResultsPage | Repair estimate results |
 | `/appointment` | AppointmentPage | Book service at VW dealer |
-| `/vehicles` | VehicleManagementPage | Vehicle CRUD management |
+| `/vehicles` | VehicleManagementPage | Vehicle CRUD with edit modal + customer owner selector |
+| `/customers` | CustomerManagementPage | Customer CRUD with +55 phone badge, dealer preference |
 | `/dealers` | DealerNetworkPage | Dealer list with create modal |
 | `/parts` | PartsPage | Parts catalog with create modal |
 
@@ -157,9 +173,9 @@ make dev
 
 ## 📞 Development Support
 
-**Current Focus**: Game reporting flow refinement and event preparation
+**Current Focus**: Customer integration, WhatsApp notifications, data persistence
 **Documentation**: All guides available in [docs/](docs/) folder
 **Event Preparation**: Modern stack operational for Brand Day demonstration
 
 **Timeline**: March 2026 Brand Day
-**Status**: ✅ Modern architecture complete and operational
+**Status**: ✅ Full crash-to-repair flow with WhatsApp integration operational

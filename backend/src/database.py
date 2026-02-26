@@ -1,6 +1,7 @@
 """Database setup and configuration for async SQLAlchemy."""
 
 import csv
+import json
 from pathlib import Path
 from uuid import uuid4
 
@@ -214,3 +215,179 @@ async def seed_parts_if_empty():
 
         await session.commit()
         logger.info(f"Seeded {idx} parts from CSV")
+
+
+# ---------------------------------------------------------------------------
+# Auto-seed core entities (dealers, customer, vehicle) on every startup
+# ---------------------------------------------------------------------------
+
+_DEALERS_JSON_CANDIDATES = [
+    Path("/app/data/dealers/vw_brazil_dealers.json"),
+    Path(__file__).parent.parent / "data" / "dealers" / "vw_brazil_dealers.json",
+    Path(__file__).parent.parent.parent / "data" / "dealers" / "vw_brazil_dealers.json",
+]
+
+_VEHICLES_JSON_CANDIDATES = [
+    Path("/app/data/vehicles/vw_models.json"),
+    Path(__file__).parent.parent / "data" / "vehicles" / "vw_models.json",
+    Path(__file__).parent.parent.parent / "data" / "vehicles" / "vw_models.json",
+]
+
+
+def _find_json(candidates: list) -> Path | None:
+    for p in candidates:
+        if p.exists():
+            return p
+    return None
+
+
+async def seed_core_entities():
+    """Seed dealers, customer, and vehicle with relationships on every startup.
+
+    Idempotent: checks by unique fields before inserting.
+    Repairs broken relationships if entities exist but FKs are missing.
+    """
+    async with async_session_factory() as session:
+        # ---- PHASE 1: Seed dealers from JSON ----
+        dealers_path = _find_json(_DEALERS_JSON_CANDIDATES)
+        if dealers_path is None:
+            logger.warning("Dealers JSON not found, skipping dealer seed")
+        else:
+            with open(dealers_path, "r", encoding="utf-8") as f:
+                dealers_data = json.load(f)
+
+            for dealer_key, dealer_info in dealers_data.get("dealers", {}).items():
+                name = dealer_info.get("name", dealer_key)
+                result = await session.execute(
+                    text("SELECT id FROM dealers WHERE name = :name"),
+                    {"name": name},
+                )
+                if result.scalar():
+                    continue
+
+                address = dealer_info.get("address", {})
+                await session.execute(
+                    text("""
+                        INSERT INTO dealers
+                            (id, name, cnpj, address, city, state, postal_code,
+                             phone, email, latitude, longitude,
+                             services, working_hours,
+                             is_authorized, is_active, created_at, updated_at)
+                        VALUES
+                            (:id, :name, :cnpj, :address, :city, :state, :postal_code,
+                             :phone, :email, :latitude, :longitude,
+                             :services, :working_hours,
+                             true, true, NOW(), NOW())
+                    """),
+                    {
+                        "id": str(uuid4()),
+                        "name": name,
+                        "cnpj": dealer_info.get("cnpj"),
+                        "address": address.get("street", ""),
+                        "city": address.get("city", ""),
+                        "state": address.get("state", ""),
+                        "postal_code": address.get("zipcode", ""),
+                        "phone": dealer_info.get("phone", ""),
+                        "email": dealer_info.get("email", ""),
+                        "latitude": address.get("latitude"),
+                        "longitude": address.get("longitude"),
+                        "services": dealer_info.get("services", []),
+                        "working_hours": json.dumps(dealer_info.get("opening_hours", {})),
+                    },
+                )
+                logger.info(f"Seeded dealer: {name}")
+
+            await session.commit()
+            logger.info("Dealers seed complete")
+
+        # ---- PHASE 2: Seed customer "Valmor Castro" ----
+        CUSTOMER_PHONE = "5551984336235"
+        CUSTOMER_NAME = "Valmor Castro"
+
+        # Look up Volkswagen Morumbi ID
+        result = await session.execute(
+            text("SELECT id FROM dealers WHERE name = :name"),
+            {"name": "Volkswagen Morumbi"},
+        )
+        morumbi_id = result.scalar()
+        morumbi_id_str = str(morumbi_id) if morumbi_id else None
+
+        result = await session.execute(
+            text("SELECT id, preferred_dealer_id FROM customers WHERE phone = :phone"),
+            {"phone": CUSTOMER_PHONE},
+        )
+        row = result.first()
+
+        if row is None:
+            customer_id = str(uuid4())
+            await session.execute(
+                text("""
+                    INSERT INTO customers (id, name, phone, preferred_dealer_id, created_at, updated_at)
+                    VALUES (:id, :name, :phone, :dealer_id, NOW(), NOW())
+                """),
+                {
+                    "id": customer_id,
+                    "name": CUSTOMER_NAME,
+                    "phone": CUSTOMER_PHONE,
+                    "dealer_id": morumbi_id_str,
+                },
+            )
+            logger.info(f"Seeded customer: {CUSTOMER_NAME}")
+        else:
+            customer_id = str(row[0])
+            existing_dealer_id = row[1]
+            if existing_dealer_id is None and morumbi_id_str is not None:
+                await session.execute(
+                    text("UPDATE customers SET preferred_dealer_id = :dealer_id, updated_at = NOW() WHERE id = :cid"),
+                    {"dealer_id": morumbi_id_str, "cid": customer_id},
+                )
+                logger.info(f"Repaired customer {CUSTOMER_NAME} preferred_dealer -> Volkswagen Morumbi")
+
+        await session.commit()
+
+        # ---- PHASE 3: Seed T-Cross vehicle ----
+        BEAMNG_MODEL = "vw_tcross"
+
+        result = await session.execute(
+            text("SELECT id, customer_id FROM vehicles WHERE beamng_model = :model"),
+            {"model": BEAMNG_MODEL},
+        )
+        row = result.first()
+
+        if row is None:
+            vehicles_path = _find_json(_VEHICLES_JSON_CANDIDATES)
+            vehicle_info = {}
+            if vehicles_path:
+                with open(vehicles_path, "r", encoding="utf-8") as f:
+                    vehicles_data = json.load(f)
+                vehicle_info = vehicles_data.get("vehicles", {}).get("tcross", {})
+
+            vehicle_id = str(uuid4())
+            await session.execute(
+                text("""
+                    INSERT INTO vehicles (id, model, year, vin, beamng_model, beamng_config, customer_id, created_at, updated_at)
+                    VALUES (:id, :model, :year, :vin, :beamng_model, :beamng_config, :customer_id, NOW(), NOW())
+                """),
+                {
+                    "id": vehicle_id,
+                    "model": vehicle_info.get("model_name", "Volkswagen T-Cross"),
+                    "year": vehicle_info.get("year", 2024),
+                    "vin": "9BWZZZ6TZWT000001",
+                    "beamng_model": BEAMNG_MODEL,
+                    "beamng_config": json.dumps(vehicle_info.get("assemblies", [])),
+                    "customer_id": customer_id,
+                },
+            )
+            logger.info(f"Seeded vehicle: Volkswagen T-Cross ({BEAMNG_MODEL})")
+        else:
+            vehicle_id = str(row[0])
+            existing_customer_id = row[1]
+            if existing_customer_id is None:
+                await session.execute(
+                    text("UPDATE vehicles SET customer_id = :customer_id, updated_at = NOW() WHERE id = :vid"),
+                    {"customer_id": customer_id, "vid": vehicle_id},
+                )
+                logger.info(f"Repaired vehicle {BEAMNG_MODEL} customer -> {CUSTOMER_NAME}")
+
+        await session.commit()
+        logger.info("Core entities seed complete")

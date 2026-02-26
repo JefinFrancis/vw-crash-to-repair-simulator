@@ -2,7 +2,7 @@
 
 > **For AI Agents**: Read this file at the start of every session. It contains the current project state, active workstreams, and coordination rules.
 
-**Last Updated**: 2026-02-19
+**Last Updated**: 2026-02-26
 **Repository**: github.com/JefinFrancis/vw-crash-to-repair-simulator
 
 ---
@@ -11,7 +11,8 @@
 
 A full-stack VW crash-to-repair simulator that integrates with BeamNG.drive to detect crashes, analyze damage, generate repair estimates, and book dealer appointments. Built for VW Brand Day demo.
 
-**Tech Stack**: React 18 + TypeScript | FastAPI + Python 3.11 | PostgreSQL 15 | Redis 7 | Docker
+**Tech Stack**: React 18 + TypeScript + Vite | FastAPI + Python 3.11 + SQLAlchemy 2.0 | PostgreSQL 15 | Docker
+**Note**: Redis removed in favor of Node.js proxy for BeamNG event forwarding.
 
 **Cloud Platform**: GCP (Google Cloud Platform)
 - **Project ID**: `vw-beamng`
@@ -37,24 +38,29 @@ A full-stack VW crash-to-repair simulator that integrates with BeamNG.drive to d
 
 | Component | Owner | Files | Notes |
 |-----------|-------|-------|-------|
-| BeamNG Integration | Unassigned | `api/v1/beamng.py`, `services/beamng.py` | WebSocket connection to game |
-| Vehicle Management | Unassigned | `api/v1/vehicles.py`, `services/vehicle.py` | VIN validation, BeamNG mapping |
+| BeamNG Integration | Unassigned | `api/v1/beamng.py`, `services/beamng.py` | Crash events via proxy, in-memory storage |
+| Vehicle Management | Unassigned | `api/v1/vehicles.py`, `services/vehicle.py` | CRUD + customer ownership FK |
 | Damage Analysis | Unassigned | `api/v1/damage.py`, `services/damage_report.py` | Zone-based damage scoring |
-| Parts Catalog | Unassigned | `api/v1/parts.py`, `services/part.py` | VW parts with BRL pricing |
+| Parts Catalog | Unassigned | `api/v1/parts.py`, `services/part.py` | VW parts with BRL pricing (auto-seeded from CSV) |
 | Repair Estimates | Unassigned | `api/v1/estimates.py`, `services/estimate.py` | Cost calculation with tax |
-| Dealer Network | Unassigned | `api/v1/dealers.py`, `services/dealer.py` | Geographic search, CNPJ validation |
+| Dealer Network | Unassigned | `api/v1/dealers.py`, `services/dealer.py` | Geographic search, CNPJ validation, get by ID |
 | Appointments | Unassigned | `api/v1/appointments.py`, `services/appointment.py` | Booking workflow |
+| Customers | Unassigned | `api/v1/customers.py`, `services/customer.py` | CRUD, phone validation, dealer preference |
+| WhatsApp | Unassigned | `api/v1/whatsapp.py` | Backend proxy for WhatsApp collision notifications |
+| Data Seeding | Unassigned | `database.py` | Auto-seed parts, dealers, customer, vehicle on startup |
 
 ### Frontend (`/frontend/src/`)
 
 | Component | Owner | Files | Notes |
 |-----------|-------|-------|-------|
 | Landing Page | Unassigned | `pages/LandingPage.tsx` | Dashboard with stats and navigation |
-| Damage Reports | Unassigned | `pages/DamageReportsPage.tsx` | Crash list with DB-driven costs, detail view with per-part breakdown |
+| Simulation | Unassigned | `pages/SimulationPage.tsx` | Vehicle selection + crash simulation |
+| Analysis | Unassigned | `pages/AnalysisPage.tsx` | Crash analysis + WhatsApp customer notification |
+| Damage Reports | Unassigned | `pages/DamageReportsPage.tsx` | Crash list with DB-driven costs, per-part breakdown |
 | Results Display | Unassigned | `pages/ResultsPage.tsx` | Repair estimate results |
 | Appointment Booking | Unassigned | `pages/AppointmentPage.tsx` | Multi-step wizard |
-| Vehicle Management | Unassigned | `pages/VehicleManagementPage.tsx` | CRUD interface |
-| Customer Management | Unassigned | `pages/CustomerManagementPage.tsx` | Customer list with create modal |
+| Vehicle Management | Unassigned | `pages/VehicleManagementPage.tsx` | CRUD with edit modal + customer owner selector |
+| Customer Management | Unassigned | `pages/CustomerManagementPage.tsx` | CRUD with +55 phone badge, dealer preference |
 | Dealer Network | Unassigned | `pages/DealerNetworkPage.tsx` | Dealer list with create modal |
 | Parts Catalog | Unassigned | `pages/PartsPage.tsx` | Catalog browser with create modal |
 
@@ -120,6 +126,13 @@ When you start working on a file, add it here with your name and date:
 | 2026-02-19 | Valmor | Added create functionality for dealers, parts, customers | Backend API + frontend modals |
 | 2026-02-19 | Valmor | Customer management page and /customers route | `frontend/src/pages/CustomerManagementPage.tsx`, `AppRouter.tsx` |
 | 2026-02-19 | Valmor | Updated documentation to reflect current state | `README.md`, `MIGRATION_STATUS.md`, `DEVELOPER_GUIDE.md`, `PROGRESS.md`, `AGENT_CONTEXT.md` |
+| 2026-02-24 | Valmor | Removed Redis, added Node.js proxy for crash event forwarding | `docker-compose.yml`, `proxy/proxy.js` |
+| 2026-02-25 | Valmor | Customer UUID FK migration: `preferred_dealer_cnpj` → `preferred_dealer_id` (UUID) | `models/customer.py`, `schemas/customer.py`, `services/customer.py`, `repositories/customer.py` |
+| 2026-02-25 | Valmor | Vehicle-Customer ownership: vehicles have `customer_id` FK, owner selector in UI | `models/vehicle.py`, `VehicleManagementPage.tsx` |
+| 2026-02-25 | Valmor | WhatsApp integration: backend proxy + customer notification from crash analysis | `api/v1/whatsapp.py`, `AnalysisPage.tsx`, `whatsappService.ts` |
+| 2026-02-25 | Valmor | Phone +55 visible prefix, vehicle edit modal, customer CRUD fixes | `CustomerManagementPage.tsx`, `customerService.ts`, `VehicleManagementPage.tsx` |
+| 2026-02-25 | Valmor | Dealer `getById` endpoint, customer service `commit()` fix | `api/v1/dealers.py`, `services/customer.py` |
+| 2026-02-26 | Valmor | Auto-seed core entities (dealers, customer, vehicle) on startup with relationship repair | `database.py`, `main.py` |
 
 ---
 
@@ -169,6 +182,25 @@ Critical areas where changes affect multiple components:
 - **Backend**: `database.py` → `seed_parts_if_empty()` called on startup
 - **Frontend**: `DamageReportsPage.tsx` fetches parts via `partService.list()` for DB-driven pricing
 - **Rule**: If parts schema changes, update CSV headers and `seed_parts_if_empty()` parser
+
+### 6. Core Entity Auto-Seed (Dealers, Customer, Vehicle)
+- **Backend**: `database.py` → `seed_core_entities()` called on startup after parts seed
+- **Dealers JSON**: `data/dealers/vw_brazil_dealers.json` (10 VW dealers)
+- **Vehicles JSON**: `data/vehicles/vw_models.json` (T-Cross definition)
+- **Fixed relationships**: T-Cross → Valmor Castro → VW Morumbi (repaired on every startup)
+- **Rule**: Add new seed entities to `seed_core_entities()`, ensure idempotent checks by unique field
+
+### 7. WhatsApp Notification Flow
+- **Backend proxy**: `POST /api/v1/whatsapp/send-collision` → external WhatsApp API
+- **API key**: `WPP_API_KEY` in backend environment (NOT in frontend)
+- **Frontend**: `AnalysisPage.tsx` → fetches customer via `selectedVehicle.customer_id` → confirms → sends
+- **Rule**: Vehicle must have `customer_id` set for WhatsApp flow to work
+
+### 8. Vehicle-Customer-Dealer Chain
+- **Vehicle** → `customer_id` → **Customer** → `preferred_dealer_id` → **Dealer**
+- Used in: WhatsApp flow, crash analysis, appointment booking
+- Auto-seeded on startup for T-Cross → Valmor Castro → VW Morumbi
+- **Rule**: Breaking any link in this chain breaks the WhatsApp notification flow
 
 ### 6. Docker Port Configuration
 - **Backend/Frontend Dockerfiles**: Must use port `8080` for Cloud Run
@@ -283,10 +315,10 @@ terraform apply -var-file=environments/prod.tfvars
 ### Local Ports
 | Port | Service |
 |------|---------|
-| 3000 | Frontend (React) |
+| 3000 | Frontend (React + Vite) |
 | 8000 | Backend (FastAPI) |
 | 5432 | PostgreSQL |
-| 6379 | Redis |
+| 9000 | Node.js Proxy (BeamNG crash event forwarding) |
 | 5050 | pgAdmin (optional) |
 
 ### GCP Resources
