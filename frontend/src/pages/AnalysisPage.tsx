@@ -9,7 +9,6 @@ import {
   Car,
   Clock,
   DollarSign,
-  Gauge,
   Calendar,
   Wrench,
   BarChart3,
@@ -25,6 +24,7 @@ import { beamngService } from '../services/beamngService'
 import { customerService, Customer } from '../services/customerService'
 import { dealerService } from '../services/dealerService'
 import { whatsappService } from '../services/whatsappService'
+import { appointmentService } from '../services/appointmentService'
 import { Part } from '../types'
 import {
   LABOR_RATE_BRL,
@@ -55,6 +55,41 @@ const formatTimeOnly = (dateString: string) =>
     timeZone: 'America/Sao_Paulo',
     hour: '2-digit', minute: '2-digit', hour12: false,
   })
+
+const TIME_SLOTS = [
+  '08:00', '08:30', '09:00', '09:30', '10:00', '10:30',
+  '11:00', '11:30', '13:00', '13:30', '14:00', '14:30',
+  '15:00', '15:30', '16:00', '16:30', '17:00',
+]
+
+const generateAvailableDates = () => {
+  const dates: Date[] = []
+  const today = new Date()
+  for (let i = 1; i <= 14; i++) {
+    const date = new Date(today)
+    date.setDate(today.getDate() + i)
+    if (date.getDay() !== 0) dates.push(date) // exclude Sundays
+  }
+  return dates
+}
+
+const inferPriority = (severity: string): 'normal' | 'high' | 'urgent' => {
+  switch (severity) {
+    case 'total_loss':
+    case 'severe':
+      return 'urgent'
+    case 'moderate':
+      return 'high'
+    default:
+      return 'normal'
+  }
+}
+
+const priorityLabels: Record<string, { label: string; color: string }> = {
+  urgent: { label: 'Urgente', color: 'bg-red-100 text-red-700 border-red-200' },
+  high: { label: 'Alta', color: 'bg-orange-100 text-orange-700 border-orange-200' },
+  normal: { label: 'Normal', color: 'bg-blue-100 text-blue-700 border-blue-200' },
+}
 
 // Crash item from route state
 interface CrashPartDetail {
@@ -123,6 +158,17 @@ export function AnalysisPage() {
   const [wppDealerName, setWppDealerName] = useState('')
   const [sendingWpp, setSendingWpp] = useState(false)
   const [loadingWppData, setLoadingWppData] = useState(false)
+
+  // Appointment modal state
+  const [showAppointmentModal, setShowAppointmentModal] = useState(false)
+  const [loadingAppointmentData, setLoadingAppointmentData] = useState(false)
+  const [appointmentCustomer, setAppointmentCustomer] = useState<Customer | null>(null)
+  const [appointmentDealer, setAppointmentDealer] = useState<{ name: string; cnpj: string; address: string } | null>(null)
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null)
+  const [selectedTime, setSelectedTime] = useState('')
+  const [appointmentNotes, setAppointmentNotes] = useState('')
+  const [bookingAppointment, setBookingAppointment] = useState(false)
+  const [bookedAppointment, setBookedAppointment] = useState<any | null>(null)
 
   const toggleReplace = (partName: string) => {
     setReplaceParts(prev => ({ ...prev, [partName]: !prev[partName] }))
@@ -253,6 +299,94 @@ export function AnalysisPage() {
     }
   }
 
+  const openAppointmentModal = async () => {
+    if (!selectedVehicle?.customer_id) {
+      toast.error('Veículo não possui proprietário cadastrado')
+      return
+    }
+
+    setShowAppointmentModal(true)
+    setAppointmentCustomer(null)
+    setAppointmentDealer(null)
+    setBookedAppointment(null)
+    setSelectedDate(null)
+    setSelectedTime('')
+    setLoadingAppointmentData(true)
+
+    try {
+      const customer = await customerService.getById(selectedVehicle.customer_id)
+      setAppointmentCustomer(customer)
+
+      setAppointmentNotes(
+        `Reparo de colisão - Severidade: ${severityLabels[severity]} - ${crashParts.length} peças afetadas - Custo estimado: ${formatBRL(totalCost)}`
+      )
+
+      if (customer.preferred_dealer_id) {
+        try {
+          const dealer = await dealerService.getById(customer.preferred_dealer_id)
+          setAppointmentDealer({
+            name: dealer.name,
+            cnpj: dealer.business_id,
+            address: `${dealer.address}, ${dealer.city} - ${dealer.state}`,
+          })
+        } catch {
+          toast.error('Erro ao carregar dados da concessionária')
+          setShowAppointmentModal(false)
+        }
+      } else {
+        toast.error('Cliente não possui concessionária preferida cadastrada')
+        setShowAppointmentModal(false)
+      }
+    } catch {
+      toast.error('Erro ao carregar dados do proprietário')
+      setShowAppointmentModal(false)
+    } finally {
+      setLoadingAppointmentData(false)
+    }
+  }
+
+  const handleBookAppointment = async () => {
+    if (!appointmentCustomer || !appointmentDealer || !selectedDate || !selectedTime) return
+
+    setBookingAppointment(true)
+    try {
+      const result = await appointmentService.book({
+        dealer_cnpj: appointmentDealer.cnpj,
+        service_type: 'crash_repair',
+        appointment_date: selectedDate.toISOString().split('T')[0],
+        appointment_time: selectedTime,
+        estimated_duration_hours: totalLaborHours,
+        priority: inferPriority(severity),
+        notes: appointmentNotes,
+        customer_info: {
+          name: appointmentCustomer.name,
+          phone: appointmentCustomer.phone,
+          preferred_contact: 'whatsapp',
+        },
+        vehicle_info: {
+          make: crash.vehicle?.brand || 'Volkswagen',
+          model: crash.vehicle?.model || crash.vehicle?.name || '',
+          year: selectedVehicle?.year || new Date().getFullYear(),
+          vin: selectedVehicle?.vin || '',
+        },
+        damage_assessment: {
+          severity,
+          total_damage: realTotalDamage,
+          parts_count: crashParts.length,
+          total_cost: totalCost,
+        },
+      })
+      setBookedAppointment(result)
+      toast.success('Agendamento confirmado!')
+    } catch {
+      toast.error('Erro ao agendar reparo')
+    } finally {
+      setBookingAppointment(false)
+    }
+  }
+
+  const availableDates = generateAvailableDates()
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
       {/* Header */}
@@ -296,49 +430,60 @@ export function AnalysisPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
             >
-              <div className="flex items-center gap-4 mb-6">
-                <div className="w-14 h-14 bg-vw-blue rounded-xl flex items-center justify-center">
-                  <Car className="h-7 w-7 text-white" />
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 bg-vw-blue rounded-xl flex items-center justify-center">
+                    <Car className="h-7 w-7 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900">{crash.vehicle ? `${crash.vehicle.brand} ${crash.vehicle.name}` : 'Veículo'}</h2>
+                    <p className="text-sm text-gray-500">
+                      {selectedVehicle ? `${selectedVehicle.year} • VIN: ${selectedVehicle.vin}` : crash.vehicle?.brand}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="text-xl font-bold text-gray-900">{crash.vehicle ? `${crash.vehicle.brand} ${crash.vehicle.name}` : 'Veículo'}</h2>
-                  <p className="text-sm text-gray-500">
-                    {selectedVehicle ? `${selectedVehicle.year} • VIN: ${selectedVehicle.vin}` : crash.vehicle?.brand}
-                  </p>
+                <div className="flex items-center gap-3 text-right">
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">{formatDateOnly(crash.received_at)}</p>
+                    <p className="text-sm text-gray-500">{formatTimeOnly(crash.received_at)}</p>
+                  </div>
+                  <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                    <Calendar className="h-5 w-5 text-green-600" />
+                  </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-gray-50 rounded-lg p-3">
-                  <div className="flex items-center gap-2 text-gray-500 text-xs mb-1">
-                    <Gauge className="h-3.5 w-3.5" /> Velocidade
-                  </div>
-                  <p className="text-lg font-bold text-gray-900">{crash.velocity?.speed_kmh?.toFixed(0) || '0'} km/h</p>
-                </div>
-                <div className="bg-gray-50 rounded-lg p-3">
-                  <div className="flex items-center gap-2 text-gray-500 text-xs mb-1">
-                    <AlertTriangle className="h-3.5 w-3.5" /> Dano Total
-                  </div>
-                  <p className="text-lg font-bold text-gray-900">{(realTotalDamage * 100).toFixed(1)}%</p>
-                </div>
-                <div className="bg-gray-50 rounded-lg p-3">
-                  <div className="flex items-center gap-2 text-gray-500 text-xs mb-1">
-                    <Wrench className="h-3.5 w-3.5" /> Peças Danificadas
-                  </div>
-                  <p className="text-lg font-bold text-gray-900">{crashParts.length}</p>
-                </div>
-                <div className="bg-gray-50 rounded-lg p-3">
-                  <div className="flex items-center gap-2 text-gray-500 text-xs mb-1">
-                    <Calendar className="h-3.5 w-3.5" /> Data
-                  </div>
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-1.5">
-                      <Calendar className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
-                      <span className="text-sm font-bold text-gray-900">{formatDateOnly(crash.received_at)}</span>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className={`rounded-xl p-4 border shadow-sm ${severityColors[severity]}`}>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-white/50 rounded-lg flex items-center justify-center">
+                      <AlertTriangle className="h-5 w-5" />
                     </div>
-                    <div className="flex items-center gap-1.5">
-                      <Clock className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
-                      <span className="text-sm font-bold text-gray-900">{formatTimeOnly(crash.received_at)}</span>
+                    <div>
+                      <p className="text-lg font-bold">{severityLabels[severity]}</p>
+                      <p className="text-sm opacity-70">Severidade</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                      <Activity className="h-5 w-5 text-orange-600" />
+                    </div>
+                    <div>
+                      <p className="text-lg font-bold text-gray-900">{(realTotalDamage * 100).toFixed(1)}%</p>
+                      <p className="text-sm text-gray-500">Dano Total</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <Wrench className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="text-lg font-bold text-gray-900">{crashParts.length}</p>
+                      <p className="text-sm text-gray-500">Peças Danificadas</p>
                     </div>
                   </div>
                 </div>
@@ -431,39 +576,27 @@ export function AnalysisPage() {
           </div>
 
           {/* Right Sidebar */}
-          <div className="space-y-6">
-            {/* Severity Card */}
+          <div className="lg:sticky lg:top-6 space-y-6 self-start">
+            {/* Time estimate */}
             <motion.div
-              className={`rounded-xl p-6 border ${severityColors[severity]}`}
+              className="bg-vw-blue text-white rounded-xl p-6"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
             >
-              <div className="flex items-center gap-3 mb-3">
-                <AlertTriangle className="h-6 w-6" />
-                <h3 className="font-semibold">Severidade</h3>
+              <div className="flex items-center gap-3 mb-2">
+                <Clock className="h-5 w-5" />
+                <h3 className="font-semibold">Tempo Estimado</h3>
               </div>
-              <p className="text-3xl font-bold">{severityLabels[severity]}</p>
-              <p className="text-sm mt-1 opacity-75">{(realTotalDamage * 100).toFixed(1)}% de dano total</p>
+              <p className="text-3xl font-bold">{totalLaborHours.toFixed(1)}h</p>
+              <p className="text-blue-200 text-sm mt-1">de mão de obra para reparo</p>
             </motion.div>
-
-            {/* WhatsApp Button */}
-            <motion.button
-              onClick={openWppModal}
-              className="w-full flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-4 rounded-xl transition-colors"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.05 }}
-            >
-              <MessageCircle className="h-5 w-5" />
-              Enviar Orçamento via WhatsApp
-            </motion.button>
 
             {/* Cost Breakdown */}
             <motion.div
               className="bg-white rounded-xl p-6 shadow-sm border"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.1 }}
+              transition={{ delay: 0.05 }}
             >
               <div className="flex items-center gap-3 mb-4">
                 <DollarSign className="h-5 w-5 text-vw-blue" />
@@ -498,54 +631,29 @@ export function AnalysisPage() {
               </div>
             </motion.div>
 
-            {/* Stats */}
-            <motion.div
-              className="bg-white rounded-xl p-6 shadow-sm border"
+            {/* Schedule Repair Button */}
+            <motion.button
+              onClick={openAppointmentModal}
+              className="w-full flex items-center justify-center gap-2 bg-vw-blue hover:bg-vw-dark-blue text-white font-semibold py-3 px-4 rounded-xl transition-colors"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.2 }}
+              transition={{ delay: 0.1 }}
             >
-              <h3 className="font-semibold text-gray-900 mb-4">Estatísticas</h3>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-500 text-sm">Peças Danificadas</span>
-                  <span className="text-lg font-bold text-gray-900">{crashParts.length}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-red-600 text-sm">Severo / Perda Total</span>
-                  <span className="text-lg font-bold text-red-600">
-                    {partsDetail.filter(p => p.severity === 'severe' || p.severity === 'total_loss').length}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-yellow-600 text-sm">Moderado</span>
-                  <span className="text-lg font-bold text-yellow-600">
-                    {partsDetail.filter(p => p.severity === 'moderate').length}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-green-600 text-sm">Leve</span>
-                  <span className="text-lg font-bold text-green-600">
-                    {partsDetail.filter(p => p.severity === 'minor').length}
-                  </span>
-                </div>
-              </div>
-            </motion.div>
+              <Calendar className="h-5 w-5" />
+              Agendar Reparo
+            </motion.button>
 
-            {/* Time estimate */}
-            <motion.div
-              className="bg-vw-blue text-white rounded-xl p-6"
+            {/* WhatsApp Button */}
+            <motion.button
+              onClick={openWppModal}
+              className="w-full flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-4 rounded-xl transition-colors"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.3 }}
+              transition={{ delay: 0.15 }}
             >
-              <div className="flex items-center gap-3 mb-2">
-                <Clock className="h-5 w-5" />
-                <h3 className="font-semibold">Tempo Estimado</h3>
-              </div>
-              <p className="text-3xl font-bold">{totalLaborHours.toFixed(1)}h</p>
-              <p className="text-blue-200 text-sm mt-1">de mão de obra para reparo</p>
-            </motion.div>
+              <MessageCircle className="h-5 w-5" />
+              Enviar Orçamento via WhatsApp
+            </motion.button>
 
           </div>
         </div>
@@ -615,6 +723,207 @@ export function AnalysisPage() {
                 )}
                 {sendingWpp ? 'Enviando...' : 'Confirmar e Enviar'}
               </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Appointment Booking Modal */}
+      {showAppointmentModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <motion.div
+            className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 flex flex-col max-h-[85vh]"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b flex-shrink-0">
+              <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                <Calendar className="h-5 w-5 text-vw-blue" />
+                {bookedAppointment ? 'Agendamento Confirmado' : 'Agendar Reparo'}
+              </h3>
+              <button
+                onClick={() => setShowAppointmentModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="px-6 py-4 overflow-y-auto flex-1">
+              {loadingAppointmentData ? (
+                <div className="flex items-center justify-center py-12 text-gray-400">
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                </div>
+              ) : bookedAppointment ? (
+                /* Confirmation View */
+                <div className="text-center space-y-4">
+                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
+                    <Check className="h-8 w-8 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="text-xl font-bold text-gray-900">Agendamento Confirmado!</p>
+                    <p className="text-sm text-gray-500 mt-1">Seu reparo foi agendado com sucesso</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-4 text-left space-y-3">
+                    {bookedAppointment.booking_confirmation?.confirmation_number && (
+                      <div>
+                        <p className="text-xs text-gray-500 uppercase tracking-wide">Confirmação</p>
+                        <p className="font-bold text-vw-blue text-lg">{bookedAppointment.booking_confirmation.confirmation_number}</p>
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-xs text-gray-500 uppercase tracking-wide">Data</p>
+                      <p className="font-medium text-gray-900">
+                        {selectedDate?.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 uppercase tracking-wide">Horário</p>
+                      <p className="font-medium text-gray-900">{selectedTime}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 uppercase tracking-wide">Concessionária</p>
+                      <p className="font-medium text-gray-900">{appointmentDealer?.name}</p>
+                    </div>
+                  </div>
+                </div>
+              ) : appointmentCustomer && appointmentDealer ? (
+                /* Booking Form */
+                <div className="space-y-5">
+                  {/* Pre-populated Summary */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <p className="text-xs text-gray-500 uppercase tracking-wide">Concessionária</p>
+                      <p className="font-medium text-gray-900 text-sm">{appointmentDealer.name}</p>
+                      <p className="text-xs text-gray-400">{appointmentDealer.address}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 uppercase tracking-wide">Cliente</p>
+                      <p className="font-medium text-gray-900 text-sm">{appointmentCustomer.name}</p>
+                      <p className="text-xs text-gray-400">{customerService.formatPhone(appointmentCustomer.phone)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 uppercase tracking-wide">Veículo</p>
+                      <p className="font-medium text-gray-900 text-sm">
+                        {crash.vehicle?.brand} {crash.vehicle?.name || crash.vehicle?.model}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 uppercase tracking-wide">Serviço</p>
+                      <p className="font-medium text-gray-900 text-sm">Reparo de Colisão</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 uppercase tracking-wide">Prioridade</p>
+                      <span className={`inline-block px-2 py-0.5 text-xs rounded-full font-medium border ${priorityLabels[inferPriority(severity)].color}`}>
+                        {priorityLabels[inferPriority(severity)].label}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 uppercase tracking-wide">Estimativa</p>
+                      <p className="font-medium text-gray-900 text-sm">{totalLaborHours.toFixed(1)}h - {formatBRL(totalCost)}</p>
+                    </div>
+                  </div>
+
+                  <div className="border-t pt-4">
+                    {/* Date Selection */}
+                    <p className="text-sm font-semibold text-gray-900 mb-2">Selecione a Data</p>
+                    <div className="grid grid-cols-5 gap-2">
+                      {availableDates.map(date => {
+                        const isSelected = selectedDate?.toDateString() === date.toDateString()
+                        return (
+                          <button
+                            key={date.toISOString()}
+                            onClick={() => { setSelectedDate(date); setSelectedTime('') }}
+                            className={`p-2 rounded-lg text-center text-sm transition-colors border ${
+                              isSelected
+                                ? 'bg-vw-blue text-white border-vw-blue'
+                                : 'bg-white hover:bg-gray-50 border-gray-200 text-gray-700'
+                            }`}
+                          >
+                            <span className="block text-xs opacity-75">
+                              {date.toLocaleDateString('pt-BR', { weekday: 'short' })}
+                            </span>
+                            <span className="block font-semibold">
+                              {date.getDate()}/{date.getMonth() + 1}
+                            </span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Time Selection */}
+                  {selectedDate && (
+                    <div>
+                      <p className="text-sm font-semibold text-gray-900 mb-2">Selecione o Horário</p>
+                      <div className="grid grid-cols-4 gap-2">
+                        {TIME_SLOTS.map(time => {
+                          const isSelected = selectedTime === time
+                          return (
+                            <button
+                              key={time}
+                              onClick={() => setSelectedTime(time)}
+                              className={`py-2 px-3 rounded-lg text-sm font-medium transition-colors border ${
+                                isSelected
+                                  ? 'bg-vw-blue text-white border-vw-blue'
+                                  : 'bg-white hover:bg-gray-50 border-gray-200 text-gray-700'
+                              }`}
+                            >
+                              {time}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Notes */}
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900 mb-2">Observações</p>
+                    <textarea
+                      value={appointmentNotes}
+                      onChange={e => setAppointmentNotes(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm resize-none focus:ring-2 focus:ring-vw-blue focus:border-transparent"
+                      rows={2}
+                    />
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 border-t flex justify-end gap-3 flex-shrink-0">
+              {bookedAppointment ? (
+                <button
+                  onClick={() => setShowAppointmentModal(false)}
+                  className="px-4 py-2 text-sm bg-vw-blue hover:bg-vw-dark-blue text-white rounded-lg transition-colors"
+                >
+                  Fechar
+                </button>
+              ) : (
+                <>
+                  <button
+                    onClick={() => setShowAppointmentModal(false)}
+                    className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleBookAppointment}
+                    disabled={!selectedDate || !selectedTime || bookingAppointment}
+                    className="flex items-center gap-2 px-4 py-2 text-sm bg-vw-blue hover:bg-vw-dark-blue text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {bookingAppointment ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Calendar className="h-4 w-4" />
+                    )}
+                    {bookingAppointment ? 'Agendando...' : 'Confirmar Agendamento'}
+                  </button>
+                </>
+              )}
             </div>
           </motion.div>
         </div>

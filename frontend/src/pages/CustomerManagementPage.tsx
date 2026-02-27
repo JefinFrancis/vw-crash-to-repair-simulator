@@ -266,7 +266,7 @@ export function CustomerManagementPage() {
           >
             <h1 className="text-3xl font-bold text-white flex items-center gap-3">
               <Users className="h-8 w-8" />
-              Gerenciamento de Clientes
+              Clientes
             </h1>
             <p className="text-blue-200 mt-2">
               Gerencie seus clientes e suas preferências de concessionária

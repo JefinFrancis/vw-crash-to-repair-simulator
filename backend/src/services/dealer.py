@@ -76,6 +76,53 @@ class DealerService(BaseService):
             logger.error(f"Error creating dealer: {str(e)}")
             raise ServiceException(f"Failed to create dealer: {str(e)}")
 
+    async def update_dealer(self, dealer_id: str, update_data: Dict[str, Any]) -> Optional[Dealer]:
+        """Update an existing dealer."""
+        try:
+            from uuid import UUID as PyUUID
+            uid = PyUUID(dealer_id)
+            result = await self.db_session.execute(
+                select(Dealer).where(Dealer.id == uid)
+            )
+            dealer = result.scalar_one_or_none()
+            if not dealer:
+                return None
+            for key, value in update_data.items():
+                if hasattr(dealer, key) and value is not None:
+                    setattr(dealer, key, value)
+            await self.db_session.commit()
+            await self.db_session.refresh(dealer)
+            logger.info(f"Updated dealer: {dealer.name}")
+            return dealer
+        except ValueError:
+            raise ValidationException(f"Invalid dealer ID format: {dealer_id}")
+        except Exception as e:
+            await self.db_session.rollback()
+            logger.error(f"Error updating dealer: {str(e)}")
+            raise ServiceException(f"Failed to update dealer: {str(e)}")
+
+    async def delete_dealer(self, dealer_id: str) -> bool:
+        """Delete a dealer by UUID."""
+        try:
+            from uuid import UUID as PyUUID
+            uid = PyUUID(dealer_id)
+            result = await self.db_session.execute(
+                select(Dealer).where(Dealer.id == uid)
+            )
+            dealer = result.scalar_one_or_none()
+            if not dealer:
+                return False
+            await self.db_session.delete(dealer)
+            await self.db_session.commit()
+            logger.info(f"Deleted dealer: {dealer.name}")
+            return True
+        except ValueError:
+            raise ValidationException(f"Invalid dealer ID format: {dealer_id}")
+        except Exception as e:
+            await self.db_session.rollback()
+            logger.error(f"Error deleting dealer: {str(e)}")
+            raise ServiceException(f"Failed to delete dealer: {str(e)}")
+
     async def get_dealers(
         self,
         skip: int = 0,

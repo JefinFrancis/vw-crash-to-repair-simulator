@@ -169,6 +169,70 @@ async def validate_dealer_cnpj(
         )
 
 
+@router.put("/{dealer_id}", response_model=DealerResponse)
+async def update_dealer(
+    dealer_id: str,
+    dealer_data: DealerUpdate,
+    dealer_service: DealerServiceDep
+) -> DealerResponse:
+    """Update an existing dealer."""
+    try:
+        logger.info("Updating dealer", dealer_id=dealer_id)
+        dealer = await dealer_service.update_dealer(
+            dealer_id, dealer_data.model_dump(exclude_unset=True)
+        )
+        if not dealer:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={"error": "Not Found", "message": "Dealer not found"}
+            )
+        logger.info("Successfully updated dealer", dealer_id=dealer_id)
+        return dealer
+    except HTTPException:
+        raise
+    except ValidationException as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"error": "Validation Error", "message": str(e)}
+        )
+    except Exception as e:
+        logger.error("Unexpected error updating dealer", error=str(e), exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={"error": "Internal Server Error", "message": "Failed to update dealer"}
+        )
+
+
+@router.delete("/{dealer_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_dealer(
+    dealer_id: str,
+    dealer_service: DealerServiceDep
+):
+    """Delete a dealer."""
+    try:
+        logger.info("Deleting dealer", dealer_id=dealer_id)
+        deleted = await dealer_service.delete_dealer(dealer_id)
+        if not deleted:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={"error": "Not Found", "message": "Dealer not found"}
+            )
+        logger.info("Successfully deleted dealer", dealer_id=dealer_id)
+    except HTTPException:
+        raise
+    except ValidationException as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"error": "Validation Error", "message": str(e)}
+        )
+    except Exception as e:
+        logger.error("Unexpected error deleting dealer", error=str(e), exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={"error": "Internal Server Error", "message": "Failed to delete dealer"}
+        )
+
+
 @router.get("/{dealer_id}", response_model=DealerResponse)
 async def get_dealer_by_id(
     dealer_id: str,

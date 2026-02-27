@@ -37,6 +37,20 @@ export const dealerService = {
     email?: string
   }): Promise<Dealer> => apiClient.post('/dealers/', data),
 
+  // Update a dealer
+  update: (id: string, data: Partial<{
+    name: string
+    phone: string
+    email: string
+    address: string
+    city: string
+    state: string
+    postal_code: string
+  }>): Promise<Dealer> => apiClient.put(`/dealers/${id}`, data),
+
+  // Delete a dealer
+  delete: (id: string): Promise<void> => apiClient.delete(`/dealers/${id}`),
+
   // Search nearby dealers
   searchNearby: (params: {
     latitude: number

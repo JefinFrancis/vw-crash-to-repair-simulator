@@ -235,7 +235,7 @@ export function VehicleManagementPage() {
           >
             <h1 className="text-3xl font-bold text-white flex items-center gap-3">
               <Car className="h-8 w-8" />
-              Gerenciamento de Veículos
+              Veículos
             </h1>
             <p className="text-blue-200 mt-2">
               Gerencie os veículos VW disponíveis para simulação de colisão

@@ -136,13 +136,6 @@ export function AppointmentPage() {
 
   const availableDates = generateDates()
 
-  // Redirect if no dealer selected
-  useEffect(() => {
-    if (!dealerCnpj) {
-      navigate('/dealers')
-    }
-  }, [dealerCnpj, navigate])
-
   // Pre-fill vehicle info from selected vehicle
   useEffect(() => {
     if (selectedVehicle) {
@@ -234,7 +227,7 @@ export function AppointmentPage() {
     if (currentIndex > 0) {
       setCurrentStep(steps[currentIndex - 1])
     } else {
-      navigate('/dealers')
+      navigate('/home')
     }
   }
 
@@ -823,8 +816,11 @@ export function AppointmentPage() {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
           >
-            <h1 className="text-3xl font-bold text-white mb-1">📅 Agendar Serviço</h1>
-            <p className="text-blue-200">{dealerName || 'Concessionária VW'}</p>
+            <h1 className="text-3xl font-bold text-white flex items-center gap-3">
+              <Calendar className="h-8 w-8" />
+              Agendamentos
+            </h1>
+            <p className="text-blue-200 mt-2">{dealerName || 'Agende serviços nas concessionárias VW'}</p>
           </motion.div>
         </div>
       </div>

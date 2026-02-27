@@ -400,29 +400,6 @@ export function ResultsPage() {
         {/* COLLISION LIST (after mode selection) */}
         {mode && (
           <>
-            {/* Back + action bar */}
-            <motion.div
-              className="flex items-center justify-end mb-6"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-            >
-              <div className="flex items-center gap-3">
-                {mode === 'beamng' && (
-                  <div className="flex items-center gap-2 text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded-lg px-3 py-1.5">
-                    <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
-                    BeamNG Ativo
-                  </div>
-                )}
-                <button
-                  onClick={() => setShowSimModal(true)}
-                  className="vw-button-primary flex items-center gap-2 text-sm"
-                >
-                  <Zap className="h-4 w-4" />
-                  Nova Simulação
-                </button>
-              </div>
-            </motion.div>
-
             {/* Stats Cards */}
             <motion.div
               className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6"
@@ -488,6 +465,13 @@ export function ResultsPage() {
               </div>
               <button onClick={refreshCrashes} className="p-3 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl transition-colors" title="Atualizar">
                 <RefreshCw className="h-5 w-5 text-gray-500" />
+              </button>
+              <button
+                onClick={() => setShowSimModal(true)}
+                className="vw-button-primary flex items-center gap-2 py-3"
+              >
+                <Zap className="h-4 w-4" />
+                Nova Simulação
               </button>
             </motion.div>
 

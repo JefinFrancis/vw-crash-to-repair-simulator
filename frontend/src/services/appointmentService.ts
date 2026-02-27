@@ -44,7 +44,7 @@ export const appointmentService = {
     insurance_info?: any
     special_requirements?: string[]
   }): Promise<Appointment> =>
-    apiClient.post('/appointments/', appointmentData),
+    apiClient.post('/appointments/book', appointmentData),
 
   // Get appointment by booking ID
   getByBookingId: (bookingId: string): Promise<Appointment> =>
