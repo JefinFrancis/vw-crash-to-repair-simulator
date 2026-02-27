@@ -253,6 +253,7 @@ class CrashEventResponse(BaseModel):
     """Response to crash event submission."""
     success: bool = Field(..., description="Whether event was processed successfully")
     crash_id: str = Field(..., description="Unique crash event ID")
+    uuid: Optional[str] = Field(None, description="UUID primary key of the crash event")
     message: str = Field(..., description="Response message")
     damage_summary: Dict[str, Any] = Field(default_factory=dict, description="Summary of damage")
     estimate_available: bool = Field(default=False, description="Whether estimate is ready")

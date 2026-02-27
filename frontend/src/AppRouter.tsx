@@ -21,7 +21,8 @@ export function AppRouter() {
       <Route element={<Layout />}>
         <Route path="home" element={<LandingPage />} />
         <Route path="results" element={<ResultsPage />} />
-        <Route path="analysis" element={<AnalysisPage />} />
+        <Route path="results/:id" element={<AnalysisPage />} />
+        <Route path="analysis" element={<Navigate to="/results" replace />} />
         <Route path="appointment" element={<AppointmentPage />} />
 
         {/* Management pages */}

@@ -24,6 +24,7 @@ import toast from 'react-hot-toast'
 import { useAppStore } from '../store/useAppStore'
 import { appointmentService } from '../services/appointmentService'
 import { CustomerInfo, VehicleInfo, Appointment } from '../types'
+import { formatBRL } from '../utils/damageCalculations'
 
 // Time slots
 const TIME_SLOTS = [
@@ -80,14 +81,6 @@ const formatDate = (date: Date) => {
     month: 'long',
     day: 'numeric'
   }).format(date)
-}
-
-// Format currency in BRL
-const formatBRL = (value: number) => {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-  }).format(value)
 }
 
 // Generate next 14 days for date picker

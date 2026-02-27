@@ -1,5 +1,6 @@
 """Repository for crash event database operations."""
 
+import uuid as uuid_mod
 from typing import Optional, List
 from sqlalchemy import select, delete, func, desc
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,6 +20,13 @@ class CrashEventRepository:
         await self.db_session.flush()
         await self.db_session.refresh(crash_event)
         return crash_event
+
+    async def get_by_id(self, id: uuid_mod.UUID) -> Optional[CrashEvent]:
+        """Get a crash event by its UUID primary key."""
+        result = await self.db_session.execute(
+            select(CrashEvent).where(CrashEvent.id == id)
+        )
+        return result.scalar_one_or_none()
 
     async def get_by_crash_id(self, crash_id: str) -> Optional[CrashEvent]:
         """Get a crash event by its crash_id string."""

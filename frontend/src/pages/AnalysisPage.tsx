@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate, useLocation, useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useQuery } from '@tanstack/react-query'
 import {
@@ -21,16 +21,20 @@ import {
 import toast from 'react-hot-toast'
 import { useAppStore } from '../store/useAppStore'
 import { partService } from '../services/partService'
+import { beamngService } from '../services/beamngService'
 import { customerService, Customer } from '../services/customerService'
 import { dealerService } from '../services/dealerService'
 import { whatsappService } from '../services/whatsappService'
 import { Part } from '../types'
-
-// Labor rate per hour (R$/h)
-const LABOR_RATE_BRL = 150
-
-const formatBRL = (value: number) =>
-  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
+import {
+  LABOR_RATE_BRL,
+  TOTAL_VEHICLE_PARTS,
+  severityColorsWithBorders as severityColors,
+  severityLabels,
+  getSeverityFromDamage,
+  findMatchingPart,
+  formatBRL,
+} from '../utils/damageCalculations'
 
 const formatDate = (dateString: string) => {
   const normalized =
@@ -44,65 +48,6 @@ const formatDate = (dateString: string) => {
   }) + ' BRT'
 }
 
-const severityColors: Record<string, string> = {
-  minor: 'bg-green-100 text-green-800 border-green-200',
-  moderate: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-  severe: 'bg-orange-100 text-orange-800 border-orange-200',
-  total_loss: 'bg-red-100 text-red-800 border-red-200',
-}
-
-const severityLabels: Record<string, string> = {
-  minor: 'Leve',
-  moderate: 'Moderado',
-  severe: 'Severo',
-  total_loss: 'Perda Total',
-}
-
-// Total parts in the vehicle (from VEHICLE_PARTS.csv)
-const TOTAL_VEHICLE_PARTS = 51
-
-const getSeverityFromDamage = (totalDamage: number): string => {
-  if (totalDamage >= 0.5) return 'severe'
-  if (totalDamage >= 0.2) return 'moderate'
-  return 'minor'
-}
-
-// BeamNG abbreviation expansions for part name matching
-const BEAMNG_ABBREV: Record<string, string> = {
-  f: 'front', r: 'rear', l: 'left', fl: 'front left',
-  fr: 'front right', rl: 'rear left', rr: 'rear right',
-  t: 'top', b: 'bottom',
-}
-
-function findMatchingPart(beamngName: string, allParts: Part[]): Part | undefined {
-  const nameLower = beamngName.toLowerCase().trim()
-  const exact = allParts.find(p => p.name.toLowerCase() === nameLower)
-  if (exact) return exact
-  const withoutPrefix = nameLower.replace(/^[a-z]+\d*_/, '')
-  const rawTokens = withoutPrefix.split(/[_\s-]+/).filter(t => t.length > 0)
-  const keywords: string[] = []
-  for (const token of rawTokens) {
-    const expanded = BEAMNG_ABBREV[token]
-    if (expanded) keywords.push(...expanded.split(' '))
-    else keywords.push(token)
-  }
-  if (keywords.length === 0) return undefined
-  let bestMatch: Part | undefined
-  let bestScore = 0
-  for (const part of allParts) {
-    const partWords = part.name.toLowerCase().split(/[\s-]+/)
-    let score = 0
-    for (const kw of keywords) {
-      for (const pw of partWords) {
-        if (pw === kw) { score += 2; break }
-        if (pw.includes(kw) || kw.includes(pw)) { score += 1; break }
-      }
-    }
-    if (score > bestScore) { bestScore = score; bestMatch = part }
-  }
-  return bestScore >= 2 ? bestMatch : undefined
-}
-
 // Crash item from route state
 interface CrashPartDetail {
   name: string
@@ -111,6 +56,7 @@ interface CrashPartDetail {
 }
 
 interface CrashData {
+  id?: string
   crash_id: string
   received_at: string
   vehicle: { id: number; name: string; model: string; brand: string }
@@ -127,12 +73,33 @@ interface CrashData {
 export function AnalysisPage() {
   const navigate = useNavigate()
   const location = useLocation()
+  const { id } = useParams<{ id: string }>()
   const { selectedVehicle } = useAppStore()
-  const crash = (location.state as { crash?: CrashData })?.crash
+  const crashFromState = (location.state as { crash?: CrashData })?.crash
+
+  const [fetchedCrash, setFetchedCrash] = useState<CrashData | null>(null)
+  const [isLoadingCrash, setIsLoadingCrash] = useState(false)
+  const [loadError, setLoadError] = useState(false)
+
+  // Fetch crash from API if we have a UUID param but no route state
+  useEffect(() => {
+    if (!crashFromState && id) {
+      setIsLoadingCrash(true)
+      beamngService.getCrashByUuid(id)
+        .then((data) => setFetchedCrash(data as CrashData))
+        .catch(() => setLoadError(true))
+        .finally(() => setIsLoadingCrash(false))
+    }
+  }, [id, crashFromState])
+
+  const crash = crashFromState || fetchedCrash
 
   // Replace/repair toggle per part: damage >= 50% defaults to replace (checked)
-  const [replaceParts, setReplaceParts] = useState<Record<string, boolean>>(() => {
-    if (!crash?.damage) return {}
+  const [replaceParts, setReplaceParts] = useState<Record<string, boolean>>({})
+
+  // Initialize replaceParts when crash data becomes available
+  useEffect(() => {
+    if (!crash?.damage) return
     const parts = crash.damage.parts?.length
       ? crash.damage.parts
       : (crash.damage.broken_parts || []).map(name => ({
@@ -140,8 +107,8 @@ export function AnalysisPage() {
         }))
     const initial: Record<string, boolean> = {}
     parts.forEach(p => { initial[p.name] = p.damage >= 0.5 })
-    return initial
-  })
+    setReplaceParts(initial)
+  }, [crash])
 
   const [showWppModal, setShowWppModal] = useState(false)
   const [wppCustomer, setWppCustomer] = useState<Customer | null>(null)
@@ -153,12 +120,16 @@ export function AnalysisPage() {
     setReplaceParts(prev => ({ ...prev, [partName]: !prev[partName] }))
   }
 
-  // Redirect if no crash data
+  // Redirect if no crash data and no way to load it
   useEffect(() => {
-    if (!crash) {
+    if (!crash && !id && !isLoadingCrash) {
       navigate('/results', { replace: true })
     }
-  }, [crash, navigate])
+    if (loadError) {
+      toast.error('Sinistro não encontrado')
+      navigate('/results', { replace: true })
+    }
+  }, [crash, id, isLoadingCrash, loadError, navigate])
 
   // Fetch parts for pricing
   const { data: allParts = [] } = useQuery({
@@ -166,6 +137,14 @@ export function AnalysisPage() {
     queryFn: () => partService.list({ per_page: 200 }),
     staleTime: 5 * 60 * 1000,
   })
+
+  if (isLoadingCrash) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 flex items-center justify-center">
+        <Loader2 className="h-12 w-12 animate-spin text-vw-blue" />
+      </div>
+    )
+  }
 
   if (!crash) return null
 

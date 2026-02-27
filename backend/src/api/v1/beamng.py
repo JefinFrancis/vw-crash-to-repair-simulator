@@ -473,6 +473,7 @@ async def receive_crash_event(
         return CrashEventResponse(
             success=True,
             crash_id=crash_id,
+            uuid=str(crash_event.id),
             message=f"Crash event received and processed. Severity: {severity}",
             damage_summary={
                 "severity": severity,
@@ -543,12 +544,32 @@ async def get_crash_history(
     total = await repo.count()
     crashes = await repo.get_history(limit=limit, offset=offset)
 
+    crash_list = []
+    for c in crashes:
+        data = dict(c.event_data)
+        data["id"] = str(c.id)
+        crash_list.append(data)
+
     return {
         "total": total,
         "limit": limit,
         "offset": offset,
-        "crashes": [c.event_data for c in crashes]
+        "crashes": crash_list
     }
+
+
+@router.get("/crash-by-uuid/{crash_uuid}")
+async def get_crash_by_uuid(crash_uuid: uuid.UUID, repo: CrashEventRepoDep) -> Dict[str, Any]:
+    """Get a specific crash event by UUID primary key."""
+    crash = await repo.get_by_id(crash_uuid)
+    if not crash:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Crash event not found: {crash_uuid}"
+        )
+    data = dict(crash.event_data)
+    data["id"] = str(crash.id)
+    return data
 
 
 @router.get("/crash/{crash_id}")
@@ -560,7 +581,9 @@ async def get_crash_by_id(crash_id: str, repo: CrashEventRepoDep) -> Dict[str, A
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Crash event not found: {crash_id}"
         )
-    return crash.event_data
+    data = dict(crash.event_data)
+    data["id"] = str(crash.id)
+    return data
 
 
 @router.delete("/crash/{crash_id}")

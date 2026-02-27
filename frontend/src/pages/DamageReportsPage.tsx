@@ -20,123 +20,45 @@ import {
   ArrowLeft,
   Mail,
   FileCheck,
-  Package
+  Package,
+  ClipboardList
 } from 'lucide-react'
 import { beamngService } from '../services/beamngService'
 import { partService } from '../services/partService'
 import { Part } from '../types'
 import toast from 'react-hot-toast'
-
-// Labor rate per hour (R$/h) - typical VW dealer rate in Brazil
-const LABOR_RATE_BRL = 150
-
-// Format currency in BRL
-const formatBRL = (value: number) => {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-  }).format(value)
-}
+import {
+  LABOR_RATE_BRL,
+  severityColors,
+  severityLabels,
+  getCrashSeverity,
+  getRepairFactor,
+  findMatchingPart,
+  formatBRL,
+} from '../utils/damageCalculations'
 
 // Format date in Brazilian format, always as BRT (UTC-3)
-const formatDate = (dateString: string) => {
+const parseDate = (dateString: string) => {
   const normalized = dateString.endsWith('Z') || dateString.includes('+') || dateString.includes('-', 10)
     ? dateString
     : dateString + 'Z'
-  const date = new Date(normalized)
-  const formatted = date.toLocaleString('pt-BR', {
+  return new Date(normalized)
+}
+
+const formatDateOnly = (dateString: string) =>
+  parseDate(dateString).toLocaleDateString('pt-BR', {
     timeZone: 'America/Sao_Paulo',
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false
+    day: '2-digit', month: '2-digit', year: 'numeric',
   })
-  return `${formatted} BRT`
-}
 
-const severityColors: Record<string, string> = {
-  minor: 'bg-green-100 text-green-800',
-  moderate: 'bg-yellow-100 text-yellow-800',
-  severe: 'bg-orange-100 text-orange-800',
-  total_loss: 'bg-red-100 text-red-800',
-}
+const formatTimeOnly = (dateString: string) =>
+  parseDate(dateString).toLocaleTimeString('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  })
 
-const severityLabels: Record<string, string> = {
-  minor: 'Leve',
-  moderate: 'Moderado',
-  severe: 'Severo',
-  total_loss: 'Perda Total',
-}
-
-// Get severity from damage percentage
-const getSeverityFromDamage = (totalDamage: number): string => {
-  if (totalDamage >= 0.8) return 'total_loss'
-  if (totalDamage >= 0.5) return 'severe'
-  if (totalDamage >= 0.2) return 'moderate'
-  return 'minor'
-}
-
-// BeamNG abbreviation expansions for part name matching
-const BEAMNG_ABBREV: Record<string, string> = {
-  'f': 'front', 'r': 'rear', 'l': 'left', 'fl': 'front left',
-  'fr': 'front right', 'rl': 'rear left', 'rr': 'rear right',
-  't': 'top', 'b': 'bottom',
-}
-
-/**
- * Match a BeamNG part name (e.g. "etk800_fender_FL") to a DB part.
- * Strategy:
- * 1. Exact match (case-insensitive)
- * 2. Keyword scoring: extract words from both names, count matches
- */
-function findMatchingPart(beamngName: string, allParts: Part[]): Part | undefined {
-  const nameLower = beamngName.toLowerCase().trim()
-
-  // 1. Exact match by English name
-  const exact = allParts.find(p => p.name.toLowerCase() === nameLower)
-  if (exact) return exact
-
-  // 2. Extract keywords from BeamNG name
-  // Remove common model prefixes (e.g., "etk800_", "tcross_", "vivace_")
-  const withoutPrefix = nameLower.replace(/^[a-z]+\d*_/, '')
-  const rawTokens = withoutPrefix.split(/[_\s-]+/).filter(t => t.length > 0)
-
-  // Expand abbreviations
-  const beamngKeywords: string[] = []
-  for (const token of rawTokens) {
-    const expanded = BEAMNG_ABBREV[token]
-    if (expanded) {
-      beamngKeywords.push(...expanded.split(' '))
-    } else {
-      beamngKeywords.push(token)
-    }
-  }
-
-  if (beamngKeywords.length === 0) return undefined
-
-  // 3. Score each DB part
-  let bestMatch: Part | undefined
-  let bestScore = 0
-
-  for (const part of allParts) {
-    const partWords = part.name.toLowerCase().split(/[\s-]+/)
-    let score = 0
-    for (const kw of beamngKeywords) {
-      for (const pw of partWords) {
-        if (pw === kw) { score += 2; break }
-        if (pw.includes(kw) || kw.includes(pw)) { score += 1; break }
-      }
-    }
-    if (score > bestScore) {
-      bestScore = score
-      bestMatch = part
-    }
-  }
-
-  // Only return match if at least 2 points (one exact word match or two partial)
-  return bestScore >= 2 ? bestMatch : undefined
+const formatDate = (dateString: string) => {
+  return `${formatDateOnly(dateString)} ${formatTimeOnly(dateString)} BRT`
 }
 
 // Resolved part info after DB lookup
@@ -195,8 +117,11 @@ function resolveBrokenParts(
 /**
  * Calculate crash maintenance cost from resolved parts.
  */
-function calculateCrashCost(resolvedParts: ResolvedPart[]) {
-  const partsCost = resolvedParts.reduce((sum, p) => sum + p.price_brl, 0)
+function calculateResolvedPartsCost(resolvedParts: ResolvedPart[]) {
+  const partsCost = resolvedParts.reduce((sum, p) => {
+    const dmg = p.damage ?? 1
+    return sum + p.price_brl * getRepairFactor(dmg)
+  }, 0)
   const totalLaborHours = resolvedParts.reduce((sum, p) => sum + p.labor_hours, 0)
   const laborCost = totalLaborHours * LABOR_RATE_BRL
   return { partsCost, laborCost, totalLaborHours, total: partsCost + laborCost }
@@ -204,6 +129,7 @@ function calculateCrashCost(resolvedParts: ResolvedPart[]) {
 
 // Crash item interface
 interface CrashItem {
+  id?: string
   crash_id: string
   received_at: string
   vehicle: {
@@ -277,7 +203,7 @@ export function DamageReportsPage() {
   // Calculate stats using DB prices
   const totalReports = crashes.length
   const severeCount = crashes.filter(c => {
-    const s = getSeverityFromDamage(c.damage.total_damage)
+    const s = getCrashSeverity(c.damage)
     return s === 'severe' || s === 'total_loss'
   }).length
   const totalDamageValue = useMemo(() => {
@@ -290,7 +216,7 @@ export function DamageReportsPage() {
         ? Object.fromEntries(c.damage.parts.map(p => [p.name, p.damage]))
         : (c.damage.part_damage || {})
       const resolved = resolveBrokenParts(partNames, partDamage, allParts)
-      const { total } = calculateCrashCost(resolved)
+      const { total } = calculateResolvedPartsCost(resolved)
       return sum + total
     }, 0)
   }, [crashes, allParts])
@@ -311,7 +237,7 @@ export function DamageReportsPage() {
   // DETAIL VIEW
   // ============================================================================
   if (selectedCrash) {
-    const severity = getSeverityFromDamage(selectedCrash.damage.total_damage)
+    const severity = getCrashSeverity(selectedCrash.damage)
     const partDamage = selectedCrash.damage.part_damage || {}
 
     // Use full parts array (all damaged parts) when available — consistent with AnalysisPage
@@ -329,7 +255,7 @@ export function DamageReportsPage() {
 
     // Resolve parts against DB
     const resolvedParts = resolveBrokenParts(effectivePartNames, effectivePartDamage, allParts)
-    const { partsCost, laborCost, totalLaborHours, total } = calculateCrashCost(resolvedParts)
+    const { partsCost, laborCost, totalLaborHours, total } = calculateResolvedPartsCost(resolvedParts)
     const matchedCount = resolvedParts.filter(p => p.matched).length
 
     // Also show all parts with any damage (for comprehensive view)
@@ -350,7 +276,7 @@ export function DamageReportsPage() {
               Voltar para lista
             </button>
             <h1 className="text-2xl font-bold text-white flex items-center gap-3">
-              <FileText className="h-7 w-7" />
+              <ClipboardList className="h-7 w-7" />
               Detalhes do Sinistro
             </h1>
             <p className="text-white/70 mt-1">
@@ -457,9 +383,11 @@ export function DamageReportsPage() {
                             </span>
                           </div>
                           <div className="col-span-3 text-right">
-                            {part.matched ? (
-                              <span className="font-semibold text-gray-900 text-sm">{formatBRL(part.price_brl)}</span>
-                            ) : (
+                            {part.matched ? (() => {
+                              const dmg = part.damage ?? 1
+                              const factor = dmg >= 0.5 ? 1 : dmg >= 0.2 ? 0.5 : 0.25
+                              return <span className="font-semibold text-gray-900 text-sm">{formatBRL(part.price_brl * factor)}</span>
+                            })() : (
                               <span className="text-sm text-gray-400">--</span>
                             )}
                           </div>
@@ -518,7 +446,7 @@ export function DamageReportsPage() {
               <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 sticky top-6">
                 <div className="flex items-center gap-2 mb-4">
                   <DollarSign className="h-5 w-5 text-green-600" />
-                  <h2 className="text-lg font-bold text-gray-900">Valor da Manutenção</h2>
+                  <h2 className="text-lg font-bold text-gray-900">Reparo</h2>
                 </div>
                 <p className="text-sm text-gray-500 mb-4">
                   Estimativa baseada em {matchedCount} peças identificadas no catálogo VW.
@@ -526,9 +454,9 @@ export function DamageReportsPage() {
                     <span className="text-amber-600"> {resolvedParts.length - matchedCount} peças não catalogadas.</span>
                   )}
                 </p>
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
-                  <p className="text-sm text-green-700 mb-1">Custo estimado total</p>
-                  <p className="text-3xl font-bold text-green-700">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                  <p className="text-sm text-vw-blue mb-1">Custo estimado total</p>
+                  <p className="text-3xl font-bold text-vw-blue">
                     {formatBRL(total)}
                   </p>
                 </div>
@@ -597,7 +525,7 @@ export function DamageReportsPage() {
             animate={{ opacity: 1, y: 0 }}
           >
             <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-              <FileText className="h-8 w-8" />
+              <ClipboardList className="h-8 w-8" />
               Relatórios de Sinistros
             </h1>
             <p className="text-blue-200 mt-2">
@@ -699,11 +627,11 @@ export function DamageReportsPage() {
           {/* Table Header */}
           <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
             <div className="grid grid-cols-12 gap-4 text-sm font-semibold text-gray-600">
-              <div className="col-span-2">Veículo</div>
+              <div className="col-span-3">Veículo</div>
               <div className="col-span-2">Severidade</div>
               <div className="col-span-2">Data</div>
               <div className="col-span-1">Peças</div>
-              <div className="col-span-2">Valor Manutenção</div>
+              <div className="col-span-1">Reparo</div>
               <div className="col-span-3 text-right">Ações</div>
             </div>
           </div>
@@ -730,7 +658,7 @@ export function DamageReportsPage() {
               </div>
             ) : (
               filteredCrashes.map((crash, index) => {
-                const crashSeverity = getSeverityFromDamage(crash.damage.total_damage)
+                const crashSeverity = getCrashSeverity(crash.damage)
                 // Use parts array (all damaged parts) when available, fall back to broken_parts
                 const effectivePartNames = crash.damage.parts?.length
                   ? crash.damage.parts.map(p => p.name)
@@ -739,7 +667,7 @@ export function DamageReportsPage() {
                   ? Object.fromEntries(crash.damage.parts.map(p => [p.name, p.damage]))
                   : (crash.damage.part_damage || {})
                 const resolved = resolveBrokenParts(effectivePartNames, effectivePartDamage, allParts)
-                const { total: crashTotal } = calculateCrashCost(resolved)
+                const { total: crashTotal } = calculateResolvedPartsCost(resolved)
 
                 return (
                   <motion.div
@@ -752,16 +680,13 @@ export function DamageReportsPage() {
                   >
                     <div className="grid grid-cols-12 gap-4 items-center">
                       {/* Vehicle */}
-                      <div className="col-span-2 flex items-center gap-3">
+                      <div className="col-span-3 flex items-center gap-3">
                         <div className="w-10 h-10 bg-vw-blue rounded-lg flex items-center justify-center flex-shrink-0">
                           <Car className="h-5 w-5 text-white" />
                         </div>
                         <div className="min-w-0">
                           <span className="font-semibold text-gray-900 block truncate">
                             {crash.vehicle?.brand} {crash.vehicle?.name}
-                          </span>
-                          <span className="text-xs text-gray-500 font-mono">
-                            ID: {crash.vehicle?.id}
                           </span>
                         </div>
                       </div>
@@ -775,18 +700,25 @@ export function DamageReportsPage() {
                       </div>
 
                       {/* Date */}
-                      <div className="col-span-2 text-sm text-gray-500">
-                        {formatDate(crash.received_at)}
+                      <div className="col-span-2 text-sm text-gray-600 flex items-center gap-3">
+                        <div className="flex items-center gap-1.5">
+                          <Calendar className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+                          <span>{formatDateOnly(crash.received_at)}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <Clock className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+                          <span>{formatTimeOnly(crash.received_at)}</span>
+                        </div>
                       </div>
 
                       {/* Damaged Parts */}
                       <div className="col-span-1 text-gray-600">
-                        {crash.damage.parts?.length || crash.damage.broken_parts?.length || 0} peças
+                        {crash.damage.parts?.length || crash.damage.broken_parts?.length || 0}
                       </div>
 
                       {/* Maintenance Cost - DB-driven */}
-                      <div className="col-span-2">
-                        <span className="font-bold text-green-700">
+                      <div className="col-span-1">
+                        <span className="font-semibold text-vw-blue">
                           {crashTotal > 0 ? formatBRL(crashTotal) : '--'}
                         </span>
                       </div>

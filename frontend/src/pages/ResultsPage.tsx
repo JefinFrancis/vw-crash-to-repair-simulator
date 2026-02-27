@@ -27,13 +27,16 @@ import { useAppStore } from '../store/useAppStore'
 import { beamngService, CrashEventSubmission } from '../services/beamngService'
 import { partService } from '../services/partService'
 import { Part } from '../types'
-
-// Labor rate per hour (R$/h)
-const LABOR_RATE_BRL = 150
-
-// Format currency in BRL
-const formatBRL = (value: number) =>
-  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
+import {
+  TOTAL_VEHICLE_PARTS,
+  severityColors,
+  severityLabels,
+  getSeverityFromDamage,
+  computeTotalDamage,
+  isUnibodyTotalled,
+  calculateCrashCost,
+  formatBRL,
+} from '../utils/damageCalculations'
 
 // Format date in BRT
 const parseDate = (dateString: string) => {
@@ -55,114 +58,6 @@ const formatTimeOnly = (dateString: string) =>
     timeZone: 'America/Sao_Paulo',
     hour: '2-digit', minute: '2-digit', hour12: false,
   })
-
-const severityColors: Record<string, string> = {
-  minor: 'bg-green-100 text-green-800',
-  moderate: 'bg-yellow-100 text-yellow-800',
-  severe: 'bg-orange-100 text-orange-800',
-  total_loss: 'bg-red-100 text-red-800',
-}
-
-const severityLabels: Record<string, string> = {
-  minor: 'Leve',
-  moderate: 'Moderado',
-  severe: 'Severo',
-  total_loss: 'Perda Total',
-}
-
-// Total parts in the vehicle (from VEHICLE_PARTS.csv)
-const TOTAL_VEHICLE_PARTS = 51
-
-const getSeverityFromDamage = (totalDamage: number): string => {
-  if (totalDamage >= 0.5) return 'severe'
-  if (totalDamage >= 0.2) return 'moderate'
-  return 'minor'
-}
-
-// Compute real total damage: sum of part damages / total vehicle parts
-function computeTotalDamage(damage: CrashItem['damage']): number {
-  const partsList = damage.parts?.length
-    ? damage.parts
-    : (damage.broken_parts || []).map(name => ({
-        name, partId: name, damage: damage.part_damage?.[name] ?? 0,
-      }))
-  const sumDamage = partsList.reduce((s, p) => s + (p.damage || 0), 0)
-  return sumDamage / TOTAL_VEHICLE_PARTS
-}
-
-// BeamNG abbreviation expansions for part name matching
-const BEAMNG_ABBREV: Record<string, string> = {
-  f: 'front', r: 'rear', l: 'left', fl: 'front left',
-  fr: 'front right', rl: 'rear left', rr: 'rear right',
-  t: 'top', b: 'bottom',
-}
-
-function findMatchingPart(beamngName: string, allParts: Part[]): Part | undefined {
-  const nameLower = beamngName.toLowerCase().trim()
-  const exact = allParts.find(p => p.name.toLowerCase() === nameLower)
-  if (exact) return exact
-  const withoutPrefix = nameLower.replace(/^[a-z]+\d*_/, '')
-  const rawTokens = withoutPrefix.split(/[_\s-]+/).filter(t => t.length > 0)
-  const keywords: string[] = []
-  for (const token of rawTokens) {
-    const expanded = BEAMNG_ABBREV[token]
-    if (expanded) keywords.push(...expanded.split(' '))
-    else keywords.push(token)
-  }
-  if (keywords.length === 0) return undefined
-  let bestMatch: Part | undefined
-  let bestScore = 0
-  for (const part of allParts) {
-    const partWords = part.name.toLowerCase().split(/[\s-]+/)
-    let score = 0
-    for (const kw of keywords) {
-      for (const pw of partWords) {
-        if (pw === kw) { score += 2; break }
-        if (pw.includes(kw) || kw.includes(pw)) { score += 1; break }
-      }
-    }
-    if (score > bestScore) { bestScore = score; bestMatch = part }
-  }
-  return bestScore >= 2 ? bestMatch : undefined
-}
-
-// Check if Unibody damage > 50% → car is totalled
-function isUnibodyTotalled(damage: CrashItem['damage']): boolean {
-  if (damage.parts?.length) {
-    const unibody = damage.parts.find(p => p.name.toLowerCase() === 'unibody')
-    if (unibody && unibody.damage > 0.4) return true
-  }
-  if (damage.part_damage) {
-    const dmg = damage.part_damage['Unibody'] ?? damage.part_damage['unibody'] ?? 0
-    if (dmg > 0.4) return true
-  }
-  return false
-}
-
-function calculateCrashCost(crash: CrashItem['damage'], allParts: Part[]) {
-  // Use full parts array when available, fall back to broken_parts
-  const partsList: Array<{ name: string; damage: number }> = crash.parts?.length
-    ? crash.parts.map(p => ({ name: p.name, damage: p.damage }))
-    : (crash.broken_parts || []).map(name => ({
-        name,
-        damage: crash.part_damage?.[name] ?? 1,
-      }))
-
-  let partsCost = 0
-  let totalLaborHours = 0
-  for (const { name, damage } of partsList) {
-    const dbPart = findMatchingPart(name, allParts)
-    if (dbPart) {
-      const price = parseFloat(dbPart.price_brl) || 0
-      // >= 50% damage: full replacement | 20-49%: 50% repair | < 20%: 25% repair
-      const factor = damage >= 0.5 ? 1 : damage >= 0.2 ? 0.5 : 0.25
-      partsCost += price * factor
-      totalLaborHours += parseFloat(dbPart.labor_hours || '0') || 0
-    }
-  }
-  const laborCost = totalLaborHours * LABOR_RATE_BRL
-  return { partsCost, laborCost, total: partsCost + laborCost }
-}
 
 // Parts affected per crash scenario (using exact English names from DB for matching)
 const SCENARIO_PARTS: Record<string, { primary: string[]; secondary: string[] }> = {
@@ -223,6 +118,7 @@ function generateSimulationParts(scenarioId: string, speed: number) {
 
 // Crash item interface
 interface CrashItem {
+  id?: string
   crash_id: string
   received_at: string
   vehicle: { id: number; name: string; model: string; brand: string }
@@ -593,7 +489,7 @@ export function ResultsPage() {
                 <div className="col-span-2">Severidade</div>
                 <div className="col-span-3">Data</div>
                 <div className="col-span-1">Peças</div>
-                <div className="col-span-2">Valor Manutenção</div>
+                <div className="col-span-2">Reparo</div>
                 <div className="col-span-1 text-right">Ações</div>
               </div>
 
@@ -623,14 +519,17 @@ export function ResultsPage() {
                       className="grid grid-cols-12 gap-4 px-6 py-4 border-b hover:bg-gray-50 transition-colors items-center cursor-pointer"
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      onClick={() => navigate('/analysis', { state: { crash } })}
+                      onClick={() => navigate(`/results/${crash.id}`, { state: { crash } })}
                     >
-                      <div className="col-span-3">
-                        <p className="font-medium text-gray-900">{crash.vehicle ? `${crash.vehicle.brand} ${crash.vehicle.name}` : 'Veículo'}</p>
-                        <p className="text-xs text-gray-500">{crash.velocity?.speed_kmh?.toFixed(0) || '0'} km/h</p>
+                      <div className="col-span-3 flex items-center gap-3">
+                        <div className="w-10 h-10 bg-vw-blue rounded-lg flex items-center justify-center flex-shrink-0">
+                          <Car className="h-5 w-5 text-white" />
+                        </div>
+                        <p className="font-medium text-gray-900 truncate">{crash.vehicle ? `${crash.vehicle.brand} ${crash.vehicle.name}` : 'Veículo'}</p>
                       </div>
                       <div className="col-span-2">
-                        <span className={`px-2 py-1 text-xs rounded-full font-medium ${severityColors[severity]}`}>
+                        <span className={`inline-flex items-center px-2.5 py-0.5 text-xs rounded-full font-medium ${severityColors[severity]}`}>
+                          {(severity === 'severe' || severity === 'total_loss') && <AlertTriangle className="h-3 w-3 mr-1" />}
                           {severityLabels[severity]}
                         </span>
                       </div>

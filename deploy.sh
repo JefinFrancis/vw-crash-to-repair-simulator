@@ -41,6 +41,7 @@ DB_NAME="vw_crash_simulator"
 DB_USER="app"
 REGISTRY="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO}"
 CLOUD_SQL_CONNECTION="${PROJECT_ID}:${REGION}:${CLOUD_SQL_INSTANCE}"
+VPC_CONNECTOR="vw-connector-dev"
 
 echo "============================================"
 echo "  VW Crash-to-Repair — Build & Deploy"
@@ -62,6 +63,19 @@ gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
 # Step 2: Reset Cloud SQL database (drop + recreate for clean schema)
 # ---------------------------------------------------------------------------
 echo "[2/9] Resetting Cloud SQL database..."
+
+# Delete both Cloud Run services to release DB connections before dropping
+echo "  Deleting backend service..."
+gcloud run services delete "$BACKEND_SERVICE" \
+    --region="$REGION" \
+    --quiet 2>&1 || echo "  (backend service not found, continuing)"
+
+echo "  Deleting frontend service..."
+gcloud run services delete "$FRONTEND_SERVICE" \
+    --region="$REGION" \
+    --quiet 2>&1 || echo "  (frontend service not found, continuing)"
+sleep 10
+
 echo "  Dropping database '$DB_NAME'..."
 gcloud sql databases delete "$DB_NAME" \
     --instance="$CLOUD_SQL_INSTANCE" \
@@ -75,7 +89,7 @@ gcloud sql operations list \
     echo "  Waiting for operation $op..."
     gcloud sql operations wait "$op" --timeout=120 --quiet 2>&1
 done
-sleep 30
+sleep 10
 
 echo "  Creating fresh database '$DB_NAME'..."
 gcloud sql databases create "$DB_NAME" \
@@ -128,6 +142,8 @@ gcloud run deploy "$BACKEND_SERVICE" \
     --min-instances=1 \
     --max-instances=1 \
     --add-cloudsql-instances="$CLOUD_SQL_CONNECTION" \
+    --vpc-connector="$VPC_CONNECTOR" \
+    --vpc-egress=private-ranges-only \
     --set-env-vars="^##^DATABASE_URL=${DATABASE_URL}##ENVIRONMENT=production##WPP_API_KEY=05a3a4c4-2a66-4aac-b965-3922018de527##SECRET_KEY=${SECRET_KEY}##LOG_LEVEL=INFO##CORS_ORIGINS=[\"http://localhost:3000\"]" \
     --quiet
 

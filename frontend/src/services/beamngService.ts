@@ -126,6 +126,10 @@ export const beamngService = {
   getCrashById: (crashId: string): Promise<any> =>
     apiClient.get(`/beamng/crash/${crashId}`),
 
+  // Get specific crash by UUID primary key
+  getCrashByUuid: (uuid: string): Promise<any> =>
+    apiClient.get(`/beamng/crash-by-uuid/${uuid}`),
+
   // Submit a crash event (for simulated crashes)
   submitCrashEvent: (crashEvent: CrashEventSubmission): Promise<CrashEventResponse> =>
     apiClient.post('/beamng/crash-event', crashEvent),
