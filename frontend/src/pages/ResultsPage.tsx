@@ -371,7 +371,7 @@ export function ResultsPage() {
       timestamp_iso: new Date().toISOString(),
       vehicle: {
         id: selectedVehicle.id,
-        name: `VW ${selectedVehicle.model}`,
+        name: selectedVehicle.model,
         model: selectedVehicle.model,
         brand: selectedVehicle.make || 'Volkswagen',
         year: selectedVehicle.year,
@@ -437,7 +437,7 @@ export function ResultsPage() {
             </h1>
             <p className="text-blue-200 mt-2">
               {selectedVehicle
-                ? <>VW {selectedVehicle.model} ({selectedVehicle.year}) &middot; <button onClick={handleChangeVehicle} className="underline hover:text-white transition-colors">Trocar veículo</button></>
+                ? <>{selectedVehicle.make || 'Volkswagen'} {selectedVehicle.model} ({selectedVehicle.year}) &middot; <button onClick={handleChangeVehicle} className="underline hover:text-white transition-colors">Trocar veículo</button></>
                 : 'Colisões registradas pelo BeamNG e simulações'}
             </p>
           </motion.div>
@@ -626,7 +626,7 @@ export function ResultsPage() {
                       onClick={() => navigate('/analysis', { state: { crash } })}
                     >
                       <div className="col-span-3">
-                        <p className="font-medium text-gray-900">{crash.vehicle?.name || 'Veículo'}</p>
+                        <p className="font-medium text-gray-900">{crash.vehicle ? `${crash.vehicle.brand} ${crash.vehicle.name}` : 'Veículo'}</p>
                         <p className="text-xs text-gray-500">{crash.velocity?.speed_kmh?.toFixed(0) || '0'} km/h</p>
                       </div>
                       <div className="col-span-2">
@@ -645,7 +645,7 @@ export function ResultsPage() {
                         </div>
                       </div>
                       <div className="col-span-1 text-sm text-gray-600">
-                        {crash.damage.broken_parts_count || 0}
+                        {crash.damage.parts?.length || crash.damage.broken_parts?.length || 0}
                       </div>
                       <div className="col-span-2 font-semibold text-vw-blue">
                         {formatBRL(cost.total)}
@@ -697,7 +697,7 @@ export function ResultsPage() {
                     <Car className="h-4 w-4 inline mr-1" /> Veículo
                   </label>
                   <div className="p-3 border-2 border-vw-blue bg-blue-50 rounded-lg">
-                    <p className="font-medium text-sm">VW {selectedVehicle?.model}</p>
+                    <p className="font-medium text-sm">{selectedVehicle?.make || 'Volkswagen'} {selectedVehicle?.model}</p>
                     <p className="text-xs text-gray-500">{selectedVehicle?.year} - {selectedVehicle?.vin?.slice(-6)}</p>
                   </div>
                 </div>

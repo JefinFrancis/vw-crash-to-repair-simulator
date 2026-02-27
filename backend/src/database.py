@@ -59,7 +59,7 @@ async def close_db():
 
 async def _apply_pending_migrations(conn):
     """Apply pending schema migrations that create_all cannot handle."""
-    # Check if customers table has old preferred_dealer_cnpj column
+    # Migration 1: customers.preferred_dealer_cnpj -> preferred_dealer_id
     result = await conn.execute(text(
         "SELECT column_name FROM information_schema.columns "
         "WHERE table_name = 'customers' AND column_name = 'preferred_dealer_cnpj'"
@@ -76,6 +76,66 @@ async def _apply_pending_migrations(conn):
         ))
         logger.info("Migration complete: preferred_dealer_id column added")
 
+    # Migration 2: vehicles.customer_id (vehicle-customer ownership)
+    result = await conn.execute(text(
+        "SELECT column_name FROM information_schema.columns "
+        "WHERE table_name = 'vehicles' AND column_name = 'customer_id'"
+    ))
+    if not result.scalar():
+        logger.info("Adding vehicles.customer_id column")
+        await conn.execute(text(
+            "ALTER TABLE vehicles ADD COLUMN customer_id UUID "
+            "REFERENCES customers(id) ON DELETE SET NULL"
+        ))
+        await conn.execute(text(
+            "CREATE INDEX ix_vehicles_customer_id ON vehicles(customer_id)"
+        ))
+        logger.info("Migration complete: vehicles.customer_id added")
+
+    # Migration 3: parts.name_pt (Portuguese name for UI)
+    result = await conn.execute(text(
+        "SELECT column_name FROM information_schema.columns "
+        "WHERE table_name = 'parts' AND column_name = 'name_pt'"
+    ))
+    if not result.scalar():
+        logger.info("Adding parts.name_pt column")
+        await conn.execute(text(
+            "ALTER TABLE parts ADD COLUMN name_pt VARCHAR(200)"
+        ))
+        await conn.execute(text(
+            "CREATE INDEX ix_parts_name_pt ON parts(name_pt)"
+        ))
+        logger.info("Migration complete: parts.name_pt added")
+
+    # Migration 4: crash_events table (persist BeamNG crash data)
+    result = await conn.execute(text(
+        "SELECT EXISTS (SELECT 1 FROM information_schema.tables "
+        "WHERE table_name = 'crash_events')"
+    ))
+    if not result.scalar():
+        logger.info("Creating crash_events table")
+        await conn.execute(text("""
+            CREATE TABLE crash_events (
+                id UUID PRIMARY KEY,
+                crash_id VARCHAR(100) NOT NULL UNIQUE,
+                event_type VARCHAR(50) NOT NULL,
+                vehicle_model VARCHAR(100),
+                vehicle_brand VARCHAR(100),
+                speed_kmh NUMERIC(8, 2),
+                total_damage NUMERIC(5, 4),
+                severity VARCHAR(20),
+                beamng_timestamp INTEGER,
+                event_data JSONB NOT NULL,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+        """))
+        await conn.execute(text("CREATE INDEX ix_crash_events_crash_id ON crash_events(crash_id)"))
+        await conn.execute(text("CREATE INDEX ix_crash_events_severity ON crash_events(severity)"))
+        await conn.execute(text("CREATE INDEX ix_crash_events_vehicle_model ON crash_events(vehicle_model)"))
+        await conn.execute(text("CREATE INDEX ix_crash_events_created_at ON crash_events(created_at DESC)"))
+        logger.info("Migration complete: crash_events table created")
+
 
 async def initialize_db():
     """Initialize database connection and create tables."""
@@ -83,7 +143,7 @@ async def initialize_db():
         # Test database connection
         async with engine.begin() as conn:
             # Import all models to ensure they are registered
-            from src.models import vehicle, damage, part, dealer, appointment, customer  # noqa
+            from src.models import vehicle, damage, part, dealer, appointment, customer, crash_event  # noqa
 
             # Create all tables
             await conn.run_sync(Base.metadata.create_all)
@@ -370,7 +430,7 @@ async def seed_core_entities():
                 """),
                 {
                     "id": vehicle_id,
-                    "model": vehicle_info.get("model_name", "Volkswagen T-Cross"),
+                    "model": vehicle_info.get("model_name", "T-Cross"),
                     "year": vehicle_info.get("year", 2024),
                     "vin": "9BWZZZ6TZWT000001",
                     "beamng_model": BEAMNG_MODEL,
@@ -378,7 +438,7 @@ async def seed_core_entities():
                     "customer_id": customer_id,
                 },
             )
-            logger.info(f"Seeded vehicle: Volkswagen T-Cross ({BEAMNG_MODEL})")
+            logger.info(f"Seeded vehicle: T-Cross ({BEAMNG_MODEL})")
         else:
             vehicle_id = str(row[0])
             existing_customer_id = row[1]

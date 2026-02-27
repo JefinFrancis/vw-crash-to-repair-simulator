@@ -219,6 +219,7 @@ interface CrashItem {
     total_damage: number
     broken_parts_count: number
     broken_parts: string[]
+    parts?: Array<{ name: string; partId: string; damage: number }>
     part_damage?: Record<string, number>
   }
 }
@@ -282,11 +283,13 @@ export function DamageReportsPage() {
   const totalDamageValue = useMemo(() => {
     if (allParts.length === 0) return 0
     return crashes.reduce((sum, c) => {
-      const resolved = resolveBrokenParts(
-        c.damage.broken_parts || [],
-        c.damage.part_damage || {},
-        allParts
-      )
+      const partNames = c.damage.parts?.length
+        ? c.damage.parts.map(p => p.name)
+        : (c.damage.broken_parts || [])
+      const partDamage = c.damage.parts?.length
+        ? Object.fromEntries(c.damage.parts.map(p => [p.name, p.damage]))
+        : (c.damage.part_damage || {})
+      const resolved = resolveBrokenParts(partNames, partDamage, allParts)
       const { total } = calculateCrashCost(resolved)
       return sum + total
     }, 0)
@@ -310,23 +313,27 @@ export function DamageReportsPage() {
   if (selectedCrash) {
     const severity = getSeverityFromDamage(selectedCrash.damage.total_damage)
     const partDamage = selectedCrash.damage.part_damage || {}
-    const brokenParts = selectedCrash.damage.broken_parts || []
 
-    // If broken_parts is empty, fall back to part_damage keys with damage > 0.5
-    const effectiveBrokenParts = brokenParts.length > 0
-      ? brokenParts
-      : Object.entries(partDamage)
-          .filter(([_, dmg]) => dmg > 0.5)
-          .sort(([_, a], [__, b]) => b - a)
-          .map(([name]) => name)
+    // Use full parts array (all damaged parts) when available — consistent with AnalysisPage
+    const effectivePartNames = selectedCrash.damage.parts?.length
+      ? selectedCrash.damage.parts.map(p => p.name)
+      : (selectedCrash.damage.broken_parts || []).length > 0
+        ? selectedCrash.damage.broken_parts
+        : Object.entries(partDamage)
+            .filter(([_, dmg]) => dmg > 0.01)
+            .sort(([_, a], [__, b]) => b - a)
+            .map(([name]) => name)
+    const effectivePartDamage = selectedCrash.damage.parts?.length
+      ? Object.fromEntries(selectedCrash.damage.parts.map(p => [p.name, p.damage]))
+      : partDamage
 
     // Resolve parts against DB
-    const resolvedParts = resolveBrokenParts(effectiveBrokenParts, partDamage, allParts)
+    const resolvedParts = resolveBrokenParts(effectivePartNames, effectivePartDamage, allParts)
     const { partsCost, laborCost, totalLaborHours, total } = calculateCrashCost(resolvedParts)
     const matchedCount = resolvedParts.filter(p => p.matched).length
 
-    // Also show all parts with any damage from part_damage (for comprehensive view)
-    const allDamagedParts = Object.entries(partDamage)
+    // Also show all parts with any damage (for comprehensive view)
+    const allDamagedParts = Object.entries(effectivePartDamage)
       .filter(([_, dmg]) => dmg > 0.01)
       .sort(([_, a], [__, b]) => b - a)
 
@@ -724,12 +731,14 @@ export function DamageReportsPage() {
             ) : (
               filteredCrashes.map((crash, index) => {
                 const crashSeverity = getSeverityFromDamage(crash.damage.total_damage)
-                // Calculate real cost from DB
-                const resolved = resolveBrokenParts(
-                  crash.damage.broken_parts || [],
-                  crash.damage.part_damage || {},
-                  allParts
-                )
+                // Use parts array (all damaged parts) when available, fall back to broken_parts
+                const effectivePartNames = crash.damage.parts?.length
+                  ? crash.damage.parts.map(p => p.name)
+                  : (crash.damage.broken_parts || [])
+                const effectivePartDamage = crash.damage.parts?.length
+                  ? Object.fromEntries(crash.damage.parts.map(p => [p.name, p.damage]))
+                  : (crash.damage.part_damage || {})
+                const resolved = resolveBrokenParts(effectivePartNames, effectivePartDamage, allParts)
                 const { total: crashTotal } = calculateCrashCost(resolved)
 
                 return (
@@ -770,9 +779,9 @@ export function DamageReportsPage() {
                         {formatDate(crash.received_at)}
                       </div>
 
-                      {/* Broken Parts */}
+                      {/* Damaged Parts */}
                       <div className="col-span-1 text-gray-600">
-                        {crash.damage.broken_parts_count} peças
+                        {crash.damage.parts?.length || crash.damage.broken_parts?.length || 0} peças
                       </div>
 
                       {/* Maintenance Cost - DB-driven */}

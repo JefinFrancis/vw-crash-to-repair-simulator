@@ -336,7 +336,7 @@ export function SimulationPage() {
                 <div className="flex items-center justify-between p-4 bg-vw-blue/5 rounded-lg border border-vw-blue/20">
                   <div>
                     <h3 className="font-semibold text-lg text-vw-blue">
-                      VW {selectedVehicle.model}
+                      {selectedVehicle.make || 'Volkswagen'} {selectedVehicle.model}
                     </h3>
                     <p className="text-gray-600">
                       Year: {selectedVehicle.year} • VIN: {selectedVehicle.vin}
@@ -472,7 +472,7 @@ export function SimulationPage() {
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-white/70">Vehicle:</span>
-                      <span>{selectedVehicle?.model || 'Not selected'}</span>
+                      <span>{selectedVehicle ? `${selectedVehicle.make || 'Volkswagen'} ${selectedVehicle.model}` : 'Not selected'}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-white/70">Scenario:</span>
@@ -573,7 +573,7 @@ export function SimulationPage() {
                             <Car className="h-6 w-6 text-white" />
                           </div>
                           <div>
-                            <h3 className="font-semibold">VW {vehicle.model}</h3>
+                            <h3 className="font-semibold">{vehicle.make || 'Volkswagen'} {vehicle.model}</h3>
                             <p className="text-sm text-gray-500">
                               Year: {vehicle.year} • VIN: {vehicle.vin}
                             </p>

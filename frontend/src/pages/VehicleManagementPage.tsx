@@ -377,7 +377,7 @@ export function VehicleManagementPage() {
                         <Car className="h-5 w-5 text-white" />
                       </div>
                       <span className="font-semibold text-gray-900">
-                        VW {vehicle.model}
+                        {vehicle.make || 'Volkswagen'} {vehicle.model}
                       </span>
                     </div>
                     <div className="col-span-1 text-gray-600">
@@ -452,7 +452,7 @@ export function VehicleManagementPage() {
               <div className="flex items-center justify-between p-6 border-b">
                 <h2 className="text-xl font-bold text-vw-blue flex items-center gap-2">
                   <Car className="h-6 w-6" />
-                  VW {selectedVehicle.model}
+                  {selectedVehicle.make || 'Volkswagen'} {selectedVehicle.model}
                 </h2>
                 <button
                   onClick={() => setShowDetails(false)}
@@ -808,7 +808,7 @@ export function VehicleManagementPage() {
               <div className="p-6">
                 <p className="text-gray-700">
                   Tem certeza que deseja excluir o veículo{' '}
-                  <span className="font-semibold">VW {selectedVehicle.model} ({selectedVehicle.year})</span>?
+                  <span className="font-semibold">{selectedVehicle.make || 'Volkswagen'} {selectedVehicle.model} ({selectedVehicle.year})</span>?
                 </p>
                 {selectedVehicle.vin && (
                   <p className="text-sm text-gray-500 mt-2">VIN: {selectedVehicle.vin}</p>

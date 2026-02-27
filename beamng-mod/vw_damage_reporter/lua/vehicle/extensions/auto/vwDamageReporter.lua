@@ -42,7 +42,7 @@ local function toJson(val)
 end
 
 local function getVehicleInfo()
-    local info = { id = obj:getId() or 0, name = "Unknown", model = "unknown", brand = "Unknown", year = 0, plate = "N/A" }
+    local info = { id = obj:getId() or 0, name = "Unknown", model = "unknown", brand = "Volkswagen", year = 0, plate = "N/A" }
     if v and v.data and v.data.information then
         local i = v.data.information
         info.name = i.name or info.name

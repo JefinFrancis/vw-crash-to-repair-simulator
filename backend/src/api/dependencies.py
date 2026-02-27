@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..database import get_async_session
 from ..services import ServiceContainer, VehicleService, DealerService, PartService, DamageReportService, AppointmentService
 from ..services.customer import CustomerService
+from ..repositories.crash_event import CrashEventRepository
 
 
 # Database session dependency
@@ -132,6 +133,13 @@ async def get_customer_service(
     return CustomerService(db_session)
 
 
+async def get_crash_event_repository(
+    db_session: Annotated[AsyncSession, Depends(get_db_session)]
+) -> CrashEventRepository:
+    """Dependency to provide CrashEventRepository for API endpoints."""
+    return CrashEventRepository(db_session)
+
+
 # Type aliases for cleaner endpoint signatures
 DBSession = Annotated[AsyncSession, Depends(get_db_session)]
 ServiceContainerDep = Annotated[ServiceContainer, Depends(get_service_container)]
@@ -141,3 +149,4 @@ PartServiceDep = Annotated[PartService, Depends(get_part_service)]
 DamageReportServiceDep = Annotated[DamageReportService, Depends(get_damage_report_service)]
 AppointmentServiceDep = Annotated[AppointmentService, Depends(get_appointment_service)]
 CustomerServiceDep = Annotated[CustomerService, Depends(get_customer_service)]
+CrashEventRepoDep = Annotated[CrashEventRepository, Depends(get_crash_event_repository)]

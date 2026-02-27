@@ -32,7 +32,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         await seed_core_entities()
     except Exception as e:
         logger.error("Failed to initialize database", error=str(e))
-        raise
+        # In production (Cloud Run), don't crash the app — let it start
+        # so health checks pass and logs are accessible for debugging.
+        # In development, fail fast so issues are caught immediately.
+        if settings.ENVIRONMENT not in ("production", "prod"):
+            raise
     
     yield
     

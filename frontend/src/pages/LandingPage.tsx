@@ -116,7 +116,7 @@ export function LandingPage() {
                       <Car className="h-5 w-5" />
                     </div>
                     <div className="min-w-0">
-                      <p className="font-semibold text-gray-900">VW {vehicle.model}</p>
+                      <p className="font-semibold text-gray-900">{vehicle.make || 'Volkswagen'} {vehicle.model}</p>
                       <p className="text-sm text-gray-500">{vehicle.year} - {vehicle.make || 'Volkswagen'}</p>
                       <p className="text-xs text-gray-400 mt-1 truncate">VIN: {vehicle.vin}</p>
                       {vehicle.beamng_model && (

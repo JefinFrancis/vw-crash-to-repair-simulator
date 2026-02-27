@@ -280,7 +280,7 @@ export function AnalysisPage() {
               Análise de Colisão
             </h1>
             <p className="text-blue-200 mt-2">
-              {crash.vehicle?.name || 'Veículo'} &middot; {formatDate(crash.received_at)}
+              {crash.vehicle ? `${crash.vehicle.brand} ${crash.vehicle.name}` : 'Veículo'} &middot; {formatDate(crash.received_at)}
             </p>
           </motion.div>
         </div>
@@ -314,7 +314,7 @@ export function AnalysisPage() {
                   <Car className="h-7 w-7 text-white" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-gray-900">{crash.vehicle?.name || 'Veículo'}</h2>
+                  <h2 className="text-xl font-bold text-gray-900">{crash.vehicle ? `${crash.vehicle.brand} ${crash.vehicle.name}` : 'Veículo'}</h2>
                   <p className="text-sm text-gray-500">
                     {selectedVehicle ? `${selectedVehicle.year} • VIN: ${selectedVehicle.vin}` : crash.vehicle?.brand}
                   </p>

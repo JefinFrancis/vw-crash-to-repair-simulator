@@ -64,8 +64,8 @@ export function ConnectionStatus() {
         
         {latestCrash?.has_crash && (
           <div className="mt-2 text-xs text-gray-500">
-            <div>Dano: {latestCrash.total_damage?.toFixed(1) ?? 0}%</div>
-            <div>Peças: {latestCrash.broken_parts_count ?? 0} danificadas</div>
+            <div>Dano: {((latestCrash.total_damage ?? 0) * 100).toFixed(1)}%</div>
+            <div>Peças: {latestCrash.damaged_parts_count ?? latestCrash.broken_parts_count ?? 0} danificadas</div>
           </div>
         )}
         

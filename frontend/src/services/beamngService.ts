@@ -96,6 +96,24 @@ export interface CrashEventResponse {
  * No active WebSocket connection to BeamNG is required.
  */
 export const beamngService = {
+  // Get BeamNG health/connection status
+  getHealth: (): Promise<any> =>
+    apiClient.get('/beamng/health'),
+
+  // Connect to BeamNG instance
+  connect: (params: { host: string; port: number }): Promise<any> =>
+    apiClient.post('/beamng/connect', params),
+
+  // Execute a crash simulation
+  executeCrash: (params: {
+    vehicle_id: string
+    crash_type: string
+    target_speed_kmh: number
+    impact_angle: number
+    record_telemetry?: boolean
+  }): Promise<any> =>
+    apiClient.post('/beamng/crash', params),
+
   // Get latest crash from BeamNG mod (webhook-received data)
   getLatestCrash: (): Promise<LatestCrashResponse> =>
     apiClient.get('/beamng/latest-crash'),
