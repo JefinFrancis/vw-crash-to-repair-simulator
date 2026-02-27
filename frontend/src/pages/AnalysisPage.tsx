@@ -36,17 +36,25 @@ import {
   formatBRL,
 } from '../utils/damageCalculations'
 
-const formatDate = (dateString: string) => {
+const parseDate = (dateString: string) => {
   const normalized =
     dateString.endsWith('Z') || dateString.includes('+') || dateString.includes('-', 10)
       ? dateString
       : dateString + 'Z'
-  return new Date(normalized).toLocaleString('pt-BR', {
+  return new Date(normalized)
+}
+
+const formatDateOnly = (dateString: string) =>
+  parseDate(dateString).toLocaleDateString('pt-BR', {
     timeZone: 'America/Sao_Paulo',
     day: '2-digit', month: '2-digit', year: 'numeric',
+  })
+
+const formatTimeOnly = (dateString: string) =>
+  parseDate(dateString).toLocaleTimeString('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
     hour: '2-digit', minute: '2-digit', hour12: false,
-  }) + ' BRT'
-}
+  })
 
 // Crash item from route state
 interface CrashPartDetail {
@@ -259,7 +267,7 @@ export function AnalysisPage() {
               Análise de Colisão
             </h1>
             <p className="text-blue-200 mt-2">
-              {crash.vehicle ? `${crash.vehicle.brand} ${crash.vehicle.name}` : 'Veículo'} &middot; {formatDate(crash.received_at)}
+              {crash.vehicle ? `${crash.vehicle.brand} ${crash.vehicle.name}` : 'Veículo'} &middot; {formatDateOnly(crash.received_at)} {formatTimeOnly(crash.received_at)}
             </p>
           </motion.div>
         </div>
@@ -323,7 +331,16 @@ export function AnalysisPage() {
                   <div className="flex items-center gap-2 text-gray-500 text-xs mb-1">
                     <Calendar className="h-3.5 w-3.5" /> Data
                   </div>
-                  <p className="text-sm font-bold text-gray-900">{formatDate(crash.received_at)}</p>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-1.5">
+                      <Calendar className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+                      <span className="text-sm font-bold text-gray-900">{formatDateOnly(crash.received_at)}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Clock className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+                      <span className="text-sm font-bold text-gray-900">{formatTimeOnly(crash.received_at)}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </motion.div>

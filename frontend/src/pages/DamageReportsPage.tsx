@@ -57,10 +57,6 @@ const formatTimeOnly = (dateString: string) =>
     hour: '2-digit', minute: '2-digit', hour12: false,
   })
 
-const formatDate = (dateString: string) => {
-  return `${formatDateOnly(dateString)} ${formatTimeOnly(dateString)} BRT`
-}
-
 // Resolved part info after DB lookup
 interface ResolvedPart {
   beamng_name: string
@@ -258,11 +254,6 @@ export function DamageReportsPage() {
     const { partsCost, laborCost, totalLaborHours, total } = calculateResolvedPartsCost(resolvedParts)
     const matchedCount = resolvedParts.filter(p => p.matched).length
 
-    // Also show all parts with any damage (for comprehensive view)
-    const allDamagedParts = Object.entries(effectivePartDamage)
-      .filter(([_, dmg]) => dmg > 0.01)
-      .sort(([_, a], [__, b]) => b - a)
-
     return (
       <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
         {/* Header */}
@@ -327,8 +318,14 @@ export function DamageReportsPage() {
                   <Calendar className="h-5 w-5 text-amber-600" />
                 </div>
                 <div>
-                  <p className="font-bold text-gray-900">{formatDate(selectedCrash.received_at)}</p>
-                  <p className="text-sm text-gray-500">Data</p>
+                  <div className="flex items-center gap-1.5">
+                    <Calendar className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+                    <span className="font-bold text-gray-900">{formatDateOnly(selectedCrash.received_at)}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Clock className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+                    <span className="font-bold text-gray-900">{formatTimeOnly(selectedCrash.received_at)}</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -349,9 +346,9 @@ export function DamageReportsPage() {
                 {/* Table header */}
                 <div className="grid grid-cols-12 gap-4 text-sm font-semibold text-gray-500 border-b border-gray-200 pb-2 mb-3">
                   <div className="col-span-1"></div>
-                  <div className="col-span-5">Peça</div>
-                  <div className="col-span-3">Severidade</div>
-                  <div className="col-span-3 text-right">Valor</div>
+                  <div className="col-span-7">Peça</div>
+                  <div className="col-span-2">Severidade</div>
+                  <div className="col-span-2 text-right">Valor</div>
                 </div>
                 <div className="space-y-1">
                   {resolvedParts.length > 0 ? (
@@ -368,21 +365,18 @@ export function DamageReportsPage() {
                               <AlertTriangle className="h-4 w-4 text-amber-400" />
                             )}
                           </div>
-                          <div className="col-span-5">
+                          <div className="col-span-7">
                             <p className="font-medium text-gray-900 text-sm">{part.name_pt}</p>
-                            {part.matched && part.name_pt !== part.name_en && (
-                              <p className="text-xs text-gray-400 italic">{part.name_en}</p>
-                            )}
                             {!part.matched && (
                               <p className="text-xs text-amber-500">Não catalogada</p>
                             )}
                           </div>
-                          <div className="col-span-3">
+                          <div className="col-span-2">
                             <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${severityColors[partSeverity]}`}>
                               {severityLabels[partSeverity]}
                             </span>
                           </div>
-                          <div className="col-span-3 text-right">
+                          <div className="col-span-2 text-right">
                             {part.matched ? (() => {
                               const dmg = part.damage ?? 1
                               const factor = dmg >= 0.5 ? 1 : dmg >= 0.2 ? 0.5 : 0.25
@@ -402,42 +396,6 @@ export function DamageReportsPage() {
                   )}
                 </div>
 
-                {/* All parts with damage (from part_damage) */}
-                {allDamagedParts.length > 0 && allDamagedParts.length !== resolvedParts.length && (
-                  <div className="mt-6 pt-4 border-t border-gray-200">
-                    <h3 className="text-sm font-semibold text-gray-500 mb-3">
-                      Todos os componentes com dano ({allDamagedParts.length})
-                    </h3>
-                    <div className="space-y-1">
-                      {allDamagedParts.slice(0, 20).map(([partName, damage], index) => {
-                        const dbPart = findMatchingPart(partName, allParts)
-                        const displayName = dbPart ? (dbPart.name_pt || dbPart.name) : partName
-                        const partSeverity = damage >= 0.8 ? 'total_loss' : damage >= 0.5 ? 'severe' : damage >= 0.2 ? 'moderate' : 'minor'
-                        return (
-                          <div key={index} className="flex items-center justify-between py-1.5 text-sm">
-                            <div className="flex items-center gap-2">
-                              <div className="w-16 bg-gray-200 rounded-full h-1.5">
-                                <div
-                                  className={`h-1.5 rounded-full ${damage >= 0.8 ? 'bg-red-500' : damage >= 0.5 ? 'bg-orange-500' : damage >= 0.2 ? 'bg-yellow-500' : 'bg-green-500'}`}
-                                  style={{ width: `${Math.min(damage * 100, 100)}%` }}
-                                />
-                              </div>
-                              <span className="text-gray-700">{displayName}</span>
-                            </div>
-                            <span className={`text-xs font-medium ${severityColors[partSeverity].split(' ')[1]}`}>
-                              {(damage * 100).toFixed(0)}%
-                            </span>
-                          </div>
-                        )
-                      })}
-                      {allDamagedParts.length > 20 && (
-                        <p className="text-xs text-gray-400 pt-2">
-                          +{allDamagedParts.length - 20} componentes adicionais
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
 

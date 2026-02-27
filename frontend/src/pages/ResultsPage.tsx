@@ -430,27 +430,42 @@ export function ResultsPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
             >
-              <div className="bg-white rounded-xl p-4 shadow-sm border">
-                <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
-                  <Car className="h-4 w-4" /> Total de Sinistros
+              <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <Car className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-gray-900">{totalCrashes}</p>
+                    <p className="text-sm text-gray-500">Total de Sinistros</p>
+                  </div>
                 </div>
-                <p className="text-2xl font-bold text-gray-900">{totalCrashes}</p>
               </div>
-              <div className="bg-white rounded-xl p-4 shadow-sm border">
-                <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
-                  <AlertTriangle className="h-4 w-4" /> Severos
+              <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                    <AlertTriangle className="h-5 w-5 text-orange-600" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-orange-600">{severeCount}</p>
+                    <p className="text-sm text-gray-500">Severos</p>
+                  </div>
                 </div>
-                <p className="text-2xl font-bold text-orange-600">{severeCount}</p>
               </div>
-              <div className="bg-white rounded-xl p-4 shadow-sm border">
-                <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
-                  <DollarSign className="h-4 w-4" /> Custo Médio
+              <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                    <DollarSign className="h-5 w-5 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {crashes.length > 0
+                        ? formatBRL(crashes.reduce((sum, c) => sum + calculateCrashCost(c.damage, allParts).total, 0) / crashes.length)
+                        : 'R$ 0,00'}
+                    </p>
+                    <p className="text-sm text-gray-500">Custo Médio</p>
+                  </div>
                 </div>
-                <p className="text-2xl font-bold text-vw-blue">
-                  {crashes.length > 0
-                    ? formatBRL(crashes.reduce((sum, c) => sum + calculateCrashCost(c.damage, allParts).total, 0) / crashes.length)
-                    : 'R$ 0,00'}
-                </p>
               </div>
             </motion.div>
 
