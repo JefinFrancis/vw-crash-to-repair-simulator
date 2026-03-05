@@ -17,7 +17,7 @@ router = APIRouter()
 logger = structlog.get_logger(__name__)
 
 
-@router.post("/", response_model=DealerResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=DealerResponse, status_code=status.HTTP_201_CREATED)
 async def create_dealer(
     dealer_data: DealerCreate,
     dealer_service: DealerServiceDep
@@ -48,7 +48,7 @@ async def create_dealer(
         )
 
 
-@router.get("/", response_model=List[DealerResponse])
+@router.get("", response_model=List[DealerResponse])
 async def list_dealers(
     dealer_service: DealerServiceDep,
     skip: int = Query(0, ge=0, description="Number of dealers to skip"),

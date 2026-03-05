@@ -18,7 +18,7 @@ router = APIRouter()
 logger = structlog.get_logger(__name__)
 
 
-@router.get("/", response_model=List[VehicleResponse])
+@router.get("", response_model=List[VehicleResponse])
 async def list_vehicles(
     vehicle_service: VehicleServiceDep,
     skip: int = Query(0, ge=0, description="Number of vehicles to skip"),
@@ -65,7 +65,7 @@ async def list_vehicles(
         )
 
 
-@router.post("/", response_model=VehicleResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=VehicleResponse, status_code=status.HTTP_201_CREATED)
 async def create_vehicle(
     vehicle_data: VehicleCreate,
     vehicle_service: VehicleServiceDep

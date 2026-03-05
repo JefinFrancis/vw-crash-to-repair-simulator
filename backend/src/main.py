@@ -52,6 +52,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 # Create FastAPI application
 app = FastAPI(
     title="VW Crash-to-Repair Simulator API",
+    redirect_slashes=False,
     description="""
     Modern FastAPI backend for VW Brand Day crash simulation and repair estimation.
     

@@ -22,7 +22,7 @@ export const dealerService = {
       params.services.forEach(service => queryParams.append('services', service))
     }
     
-    return apiClient.get(`/dealers/?${queryParams.toString()}`)
+    return apiClient.get(`/dealers?${queryParams.toString()}`)
   },
 
   // Create a new dealer
@@ -35,7 +35,7 @@ export const dealerService = {
     postal_code: string
     phone: string
     email?: string
-  }): Promise<Dealer> => apiClient.post('/dealers/', data),
+  }): Promise<Dealer> => apiClient.post('/dealers', data),
 
   // Update a dealer
   update: (id: string, data: Partial<{
@@ -59,20 +59,20 @@ export const dealerService = {
     services?: string[]
     limit?: number
   }): Promise<Array<Dealer & { distance_km: number }>> => {
-    return apiClient.get('/dealers/search/nearby/', { params })
+    return apiClient.get('/dealers/search/nearby', { params })
   },
 
   // Validate business ID
   validateBusinessId: (businessId: string): Promise<ApiResponse<{ valid: boolean; details: any }>> =>
-    apiClient.get(`/dealers/${businessId}/validate/`),
+    apiClient.get(`/dealers/${businessId}/validate`),
 
   // Get dealer performance metrics
   getPerformance: (businessId: string): Promise<ApiResponse<any>> =>
-    apiClient.get(`/dealers/${businessId}/performance/`),
+    apiClient.get(`/dealers/${businessId}/performance`),
 
   // Get dealer by business ID
   getByBusinessId: (businessId: string): Promise<Dealer> =>
-    apiClient.get(`/dealers/${businessId}/`),
+    apiClient.get(`/dealers/${businessId}`),
 
   // Get dealer by UUID
   getById: (id: string): Promise<Dealer> =>

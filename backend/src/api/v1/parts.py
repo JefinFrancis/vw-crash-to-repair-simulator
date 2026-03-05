@@ -19,7 +19,7 @@ logger = structlog.get_logger(__name__)
 
 
 
-@router.get("/", response_model=List[PartResponse])
+@router.get("", response_model=List[PartResponse])
 async def list_parts(
     part_service: PartServiceDep,
     skip: int = Query(0, ge=0, description="Number of parts to skip"),

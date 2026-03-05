@@ -41,7 +41,7 @@ export const customerService = {
     if (params?.limit !== undefined) queryParams.set('limit', params.limit.toString())
     if (params?.name) queryParams.set('name', params.name)
 
-    const url = `/customers/?${queryParams.toString()}`
+    const url = `/customers?${queryParams.toString()}`
     return apiClient.get<Customer[]>(url)
   },
 
@@ -63,7 +63,7 @@ export const customerService = {
    * Create a new customer
    */
   async create(data: CustomerCreate): Promise<Customer> {
-    return apiClient.post<Customer>('/customers/', data)
+    return apiClient.post<Customer>('/customers', data)
   },
 
   /**

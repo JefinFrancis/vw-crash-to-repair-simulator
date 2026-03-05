@@ -22,7 +22,7 @@ export const partService = {
     if (params?.part_number_search) queryParams.set('part_number_search', params.part_number_search)
     if (params?.availability_status) queryParams.set('availability_status', params.availability_status)
     
-    return apiClient.get(`/parts/?${queryParams.toString()}`)
+    return apiClient.get(`/parts?${queryParams.toString()}`)
   },
 
   // Create a new part
@@ -35,11 +35,11 @@ export const partService = {
     labor_hours?: number
     supplier?: string
     availability_status?: string
-  }): Promise<Part> => apiClient.post('/parts/', data),
+  }): Promise<Part> => apiClient.post('/parts', data),
 
   // Get part by ID
   getById: (partId: string): Promise<Part> =>
-    apiClient.get(`/parts/${partId}/`),
+    apiClient.get(`/parts/${partId}`),
 
   // Estimate repair cost
   estimateRepairCost: (params: {
@@ -48,13 +48,13 @@ export const partService = {
     region?: string
     labor_rate_modifier?: number
   }): Promise<RepairCostEstimate> =>
-    apiClient.post('/parts/repair-cost-estimate/', params),
+    apiClient.post('/parts/repair-cost-estimate', params),
 
   // Validate VW part number
   validatePartNumber: (partNumber: string): Promise<ApiResponse<{ valid: boolean; details: any }>> =>
-    apiClient.post('/parts/validate-part-number/', { part_number: partNumber }),
+    apiClient.post('/parts/validate-part-number', { part_number: partNumber }),
 
   // Get parts categories
   getCategories: (): Promise<ApiResponse<string[]>> =>
-    apiClient.get('/parts/categories/'),
+    apiClient.get('/parts/categories'),
 }

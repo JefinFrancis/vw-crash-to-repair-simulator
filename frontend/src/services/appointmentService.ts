@@ -14,7 +14,7 @@ export const appointmentService = {
     preferred_dates: string[]
     vehicle_data?: VehicleInfo
   }): Promise<ApiResponse<any>> =>
-    apiClient.get(`/appointments/dealers/${params.dealer_cnpj}/availability/`, {
+    apiClient.get(`/appointments/dealers/${params.dealer_cnpj}/availability`, {
       params: {
         service_type: params.service_type,
         preferred_dates: params.preferred_dates,
@@ -48,7 +48,7 @@ export const appointmentService = {
 
   // Get appointment by booking ID
   getByBookingId: (bookingId: string): Promise<Appointment> =>
-    apiClient.get(`/appointments/${bookingId}/`),
+    apiClient.get(`/appointments/${bookingId}`),
 
   // Reschedule appointment
   reschedule: (bookingId: string, params: {
@@ -56,14 +56,14 @@ export const appointmentService = {
     new_time: string
     reason?: string
   }): Promise<Appointment> =>
-    apiClient.put(`/appointments/${bookingId}/reschedule/`, params),
+    apiClient.put(`/appointments/${bookingId}/reschedule`, params),
 
   // Cancel appointment
   cancel: (bookingId: string, params: {
     reason?: string
     request_refund?: boolean
   }): Promise<ApiResponse<{ cancelled: boolean }>> =>
-    apiClient.delete(`/appointments/${bookingId}/`, { data: params }),
+    apiClient.delete(`/appointments/${bookingId}`, { data: params }),
 
   // List appointments
   list: (params?: {
@@ -84,6 +84,6 @@ export const appointmentService = {
     if (params?.date_from) queryParams.set('date_from', params.date_from)
     if (params?.date_to) queryParams.set('date_to', params.date_to)
     
-    return apiClient.get(`/appointments/?${queryParams.toString()}`)
+    return apiClient.get(`/appointments?${queryParams.toString()}`)
   },
 }

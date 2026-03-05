@@ -14,11 +14,11 @@ export const damageService = {
     analysis_depth?: 'basic' | 'standard' | 'detailed' | 'forensic'
     include_repair_estimate?: boolean
   }): Promise<ApiResponse<any>> =>
-    apiClient.post('/damage-reports/analyze/', crashData),
+    apiClient.post('/damage-reports/analyze', crashData),
 
   // Get damage report by ID
   getById: (reportId: string): Promise<DamageAssessment> =>
-    apiClient.get(`/damage-reports/${reportId}/`),
+    apiClient.get(`/damage-reports/${reportId}`),
 
   // Generate damage report
   generateReport: (params: {
@@ -29,11 +29,11 @@ export const damageService = {
     assessor_name: string
     assessment_type?: string
   }): Promise<DamageAssessment> =>
-    apiClient.post('/damage-reports/generate/', params),
+    apiClient.post('/damage-reports/generate', params),
 
   // Get repair recommendations
   getRecommendations: (reportId: string): Promise<ApiResponse<any>> =>
-    apiClient.get(`/damage-reports/${reportId}/recommendations/`),
+    apiClient.get(`/damage-reports/${reportId}/recommendations`),
 
   // List damage reports
   list: (params?: {
@@ -52,6 +52,6 @@ export const damageService = {
     if (params?.date_from) queryParams.set('date_from', params.date_from)
     if (params?.date_to) queryParams.set('date_to', params.date_to)
     
-    return apiClient.get(`/damage-reports/?${queryParams.toString()}`)
+    return apiClient.get(`/damage-reports?${queryParams.toString()}`)
   },
 }

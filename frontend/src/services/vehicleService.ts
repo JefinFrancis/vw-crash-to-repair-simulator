@@ -23,34 +23,34 @@ export const vehicleService = {
     if (params?.year_max) queryParams.set('year_max', params.year_max.toString())
     if (params?.vin_search) queryParams.set('vin_search', params.vin_search)
     
-    return apiClient.get(`/vehicles/?${queryParams.toString()}`)
+    return apiClient.get(`/vehicles?${queryParams.toString()}`)
   },
 
   // Create new vehicle
   create: (vehicleData: VehicleCreate): Promise<Vehicle> =>
-    apiClient.post('/vehicles/', vehicleData),
+    apiClient.post('/vehicles', vehicleData),
 
   // Get vehicle by ID
   getById: (vehicleId: string): Promise<Vehicle> =>
-    apiClient.get(`/vehicles/${vehicleId}/`),
+    apiClient.get(`/vehicles/${vehicleId}`),
 
   // Get vehicle by VIN
   getByVin: (vin: string): Promise<Vehicle> =>
-    apiClient.get(`/vehicles/vin/${vin}/`),
+    apiClient.get(`/vehicles/vin/${vin}`),
 
   // Update vehicle
   update: (vehicleId: string, vehicleData: Partial<VehicleCreate>): Promise<Vehicle> =>
-    apiClient.put(`/vehicles/${vehicleId}/`, vehicleData),
+    apiClient.put(`/vehicles/${vehicleId}`, vehicleData),
 
   // Delete vehicle
   delete: (vehicleId: string): Promise<void> =>
-    apiClient.delete(`/vehicles/${vehicleId}/`),
+    apiClient.delete(`/vehicles/${vehicleId}`),
 
   // Validate VIN
   validateVin: (vehicleId: string, vin: string): Promise<ApiResponse<{ valid: boolean; details: any }>> =>
-    apiClient.post(`/vehicles/${vehicleId}/validate-vin/`, { vin }),
+    apiClient.post(`/vehicles/${vehicleId}/validate-vin`, { vin }),
 
   // Get BeamNG status for vehicle
   getBeamNGStatus: (vehicleId: string): Promise<ApiResponse<any>> =>
-    apiClient.get(`/vehicles/${vehicleId}/beamng-status/`),
+    apiClient.get(`/vehicles/${vehicleId}/beamng-status`),
 }

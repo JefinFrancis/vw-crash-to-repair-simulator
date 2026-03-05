@@ -25,7 +25,7 @@ CustomerServiceDep = Annotated[CustomerService, Depends(get_customer_service)]
 
 
 @router.post(
-    "/",
+    "",
     response_model=CustomerResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Create a new customer",
@@ -74,7 +74,7 @@ async def create_customer(
 
 
 @router.get(
-    "/",
+    "",
     response_model=list[CustomerResponse],
     summary="List all customers",
     description="Get a paginated list of customers with optional name filtering"
